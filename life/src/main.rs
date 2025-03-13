@@ -1,4 +1,4 @@
-use std::{thread::sleep, time::Duration};
+use std::{cell, thread::sleep, time::Duration};
 
 const N: usize = 5;
 const OFFSETS: [i8; 3] = [-1, 0, 1];
@@ -11,6 +11,12 @@ fn is_position_valid(row_i: i8, col_i: i8) -> bool {
 
 fn is_different_cell(row_i_1: i8, col_i_1: i8, row_i_2: i8, col_i_2: i8) -> bool {
     row_i_1 != row_i_2 && col_i_1 != col_i_2
+}
+
+fn manage_cell_state(cells: Vec<(usize, usize)>, state: u8, matrix: &mut [[u8; N]; N]) {
+    for (row_i, col_i) in cells {
+        matrix[row_i][col_i] = state;
+    }
 }
 
 fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: [[u8; N]; N]) -> i32 {
@@ -55,11 +61,21 @@ fn main() {
 
                 if *cell == DEAD && alive_neighbours == 3 {
                     cells_to_revive.push((row_i, col_i));
-                } else if *cell == ALIVE && alive_neighbours < 2{
+                } else if *cell == ALIVE && (alive_neighbours < 2 || alive_neighbours > 3) {
                     cells_to_kill.push((row_i, col_i));
                 }
             }
         }
+        
+        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(cells_to_revive, ALIVE, &mut matrix);
+
+        // for (row_i, col_i) in cells_to_kill {
+        //     matrix[row_i][col_i] = DEAD;
+        // }
+        // for (row_i, col_i) in cells_to_revive {
+        //     matrix[row_i][col_i] = ALIVE;
+        // }
 
         sleep(Duration::from_secs(5));
     }
