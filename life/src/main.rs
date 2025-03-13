@@ -1,12 +1,12 @@
 use std::{thread::sleep, time::Duration};
 
-const N: usize = 5;
+const N: usize = 3;
 const OFFSETS: [i8; 3] = [-1, 0, 1];
 const DEAD: u8 = 0;
 const ALIVE: u8 = 1;
 
 fn is_position_valid(row_i: i8, col_i: i8) -> bool {
-    (row_i >= 0 || row_i < N as i8) || (col_i >= 0 || col_i < N as i8)
+    (row_i >= 0 && row_i < N as i8) && (col_i >= 0 && col_i < N as i8)
 }
 
 fn is_different_cell(row_i_1: i8, col_i_1: i8, row_i_2: i8, col_i_2: i8) -> bool {
@@ -32,7 +32,7 @@ fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: [[u8; N]; N])
             let col_to_check = parsed_col_i + offset;
 
             if !is_position_valid(row_to_check, col_to_check) 
-            && is_different_cell(parsed_row_i, parsed_col_i, row_to_check, col_to_check) {
+            || !is_different_cell(parsed_row_i, parsed_col_i, row_to_check, col_to_check) {
                 continue;
             };
 
@@ -48,10 +48,13 @@ fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: [[u8; N]; N])
 }
 
 fn main() {
-    let mut matrix: [[u8; N]; N] = [[DEAD; N]; N];
+    let mut matrix: [[u8; N]; N] = [
+        [0,1,0],
+        [0,1,0],
+        [0,1,0],
+        ];
     
-    
-    loop {    
+    loop {
         let mut cells_to_revive: Vec<(usize, usize)> = Vec::new();
         let mut cells_to_kill: Vec<(usize, usize)> = Vec::new();
 
