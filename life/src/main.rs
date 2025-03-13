@@ -1,4 +1,4 @@
-use std::{cell, thread::sleep, time::Duration};
+use std::{thread::sleep, time::Duration};
 
 const N: usize = 5;
 const OFFSETS: [i8; 3] = [-1, 0, 1];
@@ -69,13 +69,6 @@ fn main() {
         
         manage_cell_state(cells_to_kill, DEAD, &mut matrix);
         manage_cell_state(cells_to_revive, ALIVE, &mut matrix);
-
-        // for (row_i, col_i) in cells_to_kill {
-        //     matrix[row_i][col_i] = DEAD;
-        // }
-        // for (row_i, col_i) in cells_to_revive {
-        //     matrix[row_i][col_i] = ALIVE;
-        // }
 
         sleep(Duration::from_secs(5));
     }
