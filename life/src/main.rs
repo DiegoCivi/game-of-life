@@ -5,19 +5,6 @@ const OFFSETS: [i8; 3] = [-1, 0, 1];
 const DEAD: u8 = 0;
 const ALIVE: u8 = 1;
 
-// fn create_matrix(dimension: u8) -> Vec<Vec<u8>> {
-//     let mut matrix = Vec::new();
-//     for _ in 0..dimension {
-//         matrix.push(Vec::new());
-//     }
-//     matrix
-// }
-
-// fn check_live_cell_neighbours(col_i: usize, row_i: usize, ,matrix: [[u8; N]; N]) {
-//     let alive_neighbours = 0;
-
-// }
-
 fn is_position_valid(row_i: i8, col_i: i8) -> bool {
     (row_i >= 0 || row_i < N as i8) || (col_i >= 0 || col_i < N as i8)
 }
@@ -56,24 +43,21 @@ fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: [[u8; N]; N])
 
 fn main() {
     let mut matrix: [[u8; N]; N] = [[DEAD; N]; N];
-
-
+    
+    
     loop {    
+        let mut cells_to_revive: Vec<(usize, usize)> = Vec::new();
+        let mut cells_to_kill: Vec<(usize, usize)> = Vec::new();
+
         for (row_i, row) in matrix.iter().enumerate() {
             for (col_i, cell) in row.iter().enumerate() {
                 let alive_neighbours = check_cell_alive_neighbours(col_i, row_i, matrix);
 
                 if *cell == DEAD && alive_neighbours == 3 {
-
-                } else {
-
+                    cells_to_revive.push((row_i, col_i));
+                } else if *cell == ALIVE && alive_neighbours < 2{
+                    cells_to_kill.push((row_i, col_i));
                 }
-
-                // if *val == 0 {
-                //     check_dead_cell_neighbours(col_i, row_i, matrix);
-                // } else {
-                //     check_live_cell_neighbours(col_i, row_i, matrix);
-                // }
             }
         }
 
