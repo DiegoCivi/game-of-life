@@ -10,7 +10,7 @@ fn is_position_valid(row_i: i8, col_i: i8) -> bool {
 }
 
 fn is_different_cell(row_i_1: i8, col_i_1: i8, row_i_2: i8, col_i_2: i8) -> bool {
-    row_i_1 != row_i_2 && col_i_1 != col_i_2
+    row_i_1 != row_i_2 || col_i_1 != col_i_2
 }
 
 fn manage_cell_state(cells: Vec<(usize, usize)>, state: u8, matrix: &mut [[u8; N]; N]) {
@@ -26,11 +26,11 @@ fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: [[u8; N]; N])
     let parsed_col_i = col_i as i8;
 
     // Check all neighbours. This means we have to check on 3 rows and 3 columns.
-    for _ in 0..3 {
-        for offset in OFFSETS {
-            let row_to_check = parsed_row_i + offset;
-            let col_to_check = parsed_col_i + offset;
-
+    for row_offset in OFFSETS {
+        let row_to_check = parsed_row_i + row_offset;
+        for col_offset in OFFSETS {
+            let col_to_check = parsed_col_i + col_offset;
+            
             if !is_position_valid(row_to_check, col_to_check) 
             || !is_different_cell(parsed_row_i, parsed_col_i, row_to_check, col_to_check) {
                 continue;
