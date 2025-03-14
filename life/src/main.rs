@@ -60,7 +60,7 @@ fn manage_cell_state(cells: Vec<(usize, usize)>, state: u8, matrix: &mut [[u8; N
 /// # Returns
 /// 
 /// An `i32` that represents the number of alive neighbours.
-fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: [[u8; N]; N]) -> i32 {
+fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: &[[u8; N]; N]) -> i32 {
     let mut alive_neighbours = 0;
     // This parsing is done here so we don't do it in every loop 
     let parsed_row_i = row_i as i8;
@@ -88,28 +88,34 @@ fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: [[u8; N]; N])
     alive_neighbours
 }
 
+fn check_cell_state(matrix: &[[u8; N]; N]) -> (Vec<(usize, usize)>, Vec<(usize, usize)>) {
+    let mut cells_to_revive: Vec<(usize, usize)> = Vec::new();
+    let mut cells_to_kill: Vec<(usize, usize)> = Vec::new();
+
+    for (row_i, row) in matrix.iter().enumerate() {
+        for (col_i, cell) in row.iter().enumerate() {
+            let alive_neighbours = check_cell_alive_neighbours(col_i, row_i, matrix);
+
+            if *cell == DEAD && alive_neighbours == 3 {
+                cells_to_revive.push((row_i, col_i));
+            } else if *cell == ALIVE && (alive_neighbours < 2 || alive_neighbours > 3) {
+                cells_to_kill.push((row_i, col_i));
+            }
+        }
+    }
+
+    (cells_to_revive, cells_to_kill)
+}
+
 fn main() {
     let mut matrix: [[u8; N]; N] = [
         [0,1,0],
         [0,1,0],
         [0,1,0],
-        ];
+    ];
     
     loop {
-        let mut cells_to_revive: Vec<(usize, usize)> = Vec::new();
-        let mut cells_to_kill: Vec<(usize, usize)> = Vec::new();
-
-        for (row_i, row) in matrix.iter().enumerate() {
-            for (col_i, cell) in row.iter().enumerate() {
-                let alive_neighbours = check_cell_alive_neighbours(col_i, row_i, matrix);
-
-                if *cell == DEAD && alive_neighbours == 3 {
-                    cells_to_revive.push((row_i, col_i));
-                } else if *cell == ALIVE && (alive_neighbours < 2 || alive_neighbours > 3) {
-                    cells_to_kill.push((row_i, col_i));
-                }
-            }
-        }
+        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
         
         manage_cell_state(cells_to_kill, DEAD, &mut matrix);
         manage_cell_state(cells_to_revive, ALIVE, &mut matrix);
