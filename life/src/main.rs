@@ -1,4 +1,4 @@
-use macroquad::{color::{BLUE, RED, WHITE}, shapes::draw_rectangle, window::{clear_background, next_frame, screen_height, screen_width}};
+use macroquad::{color::{BLUE, RED, WHITE}, shapes::draw_rectangle, window::{clear_background, next_frame, screen_height, screen_width, Conf}};
 
 const N: usize = 4;
 const M: usize = 4;
@@ -59,8 +59,17 @@ fn draw_cells_grid(cell_witdh: f32, cell_height: f32) {
     }
 }
 
+fn window_conf() -> Conf {
+    Conf {
+        window_title: "Game of Life".to_owned(),
+        window_width: 800,
+        window_height: 800,
+        ..Default::default()
+    }
+}
 
-#[macroquad::main("Game of Life")]
+
+#[macroquad::main(window_conf)]
 async fn main() {
     let mut matrix: [[u8; N]; N] = [
         [0,1,0,0],
