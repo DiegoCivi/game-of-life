@@ -88,6 +88,17 @@ fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: &[[u8; N]; N]
     alive_neighbours
 }
 
+/// Checks which cells should be revived and which cells should be killed.
+/// 
+/// # Arguments
+/// 
+/// - `matrix`: An array with arrays that represent the matrix which contains every cell.
+/// 
+/// # Returns
+/// 
+/// A tuple containing two `Vec<(usize, usize)>`. The first one represents all the cells
+/// that should be brought back to life, while the second vector represents all the cells
+/// that should be killed.
 fn check_cell_state(matrix: &[[u8; N]; N]) -> (Vec<(usize, usize)>, Vec<(usize, usize)>) {
     let mut cells_to_revive: Vec<(usize, usize)> = Vec::new();
     let mut cells_to_kill: Vec<(usize, usize)> = Vec::new();
@@ -190,7 +201,7 @@ mod tests {
     }
 
     #[test]
-    fn only_one_neighbour_both_dies() {
+    fn only_one_neighbour_both_die() {
         let mut matrix: [[u8; 3]; 3] = [
             [0,1,0],
             [0,1,0],
