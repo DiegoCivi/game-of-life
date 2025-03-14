@@ -117,10 +117,16 @@ fn main() {
     loop {
         let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
         
+        if cells_to_kill.is_empty() && cells_to_revive.is_empty() {
+            break;
+        }
+
         manage_cell_state(cells_to_kill, DEAD, &mut matrix);
         manage_cell_state(cells_to_revive, ALIVE, &mut matrix);
 
+        // This sleep is to make the output more readeable
         sleep(Duration::from_secs(5));
     }
 
 }
+
