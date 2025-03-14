@@ -130,3 +130,181 @@ fn main() {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn alone_cell_dies() {
+        let mut matrix: [[u8; 3]; 3] = [
+            [0,0,0],
+            [0,1,0],
+            [0,0,0],
+        ];
+        let result_matrix: [[u8; 3]; 3] = [
+            [0,0,0],
+            [0,0,0],
+            [0,0,0],
+        ];
+        
+        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
+
+        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+
+        assert_eq!(matrix, result_matrix);
+    }
+
+    #[test]
+    fn two_neighbours_survives_then_dies() {
+        let mut matrix: [[u8; 3]; 3] = [
+            [0,0,1],
+            [0,1,0],
+            [1,0,0],
+        ];
+        let result_one_iteration_matrix: [[u8; 3]; 3] = [
+            [0,0,0],
+            [0,1,0],
+            [0,0,0],
+        ];
+        let result_two_iterations_matrix: [[u8; 3]; 3] = [
+            [0,0,0],
+            [0,0,0],
+            [0,0,0],
+        ];
+        
+        // Start of first iteration
+        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
+        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+               
+        assert_eq!(matrix, result_one_iteration_matrix);
+
+        // Start of second iteration
+        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
+        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+               
+        assert_eq!(matrix, result_two_iterations_matrix);
+
+    }
+
+    #[test]
+    fn only_one_neighbour_both_dies() {
+        let mut matrix: [[u8; 3]; 3] = [
+            [0,1,0],
+            [0,1,0],
+            [0,0,0],
+        ];
+        let result_matrix: [[u8; 3]; 3] = [
+            [0,0,0],
+            [0,0,0],
+            [0,0,0],
+        ];
+        
+        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
+
+        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+               
+        assert_eq!(matrix, result_matrix);
+    }
+
+    #[test]
+    fn four_neighbours_cell_dies() {
+        let mut matrix: [[u8; 3]; 3] = [
+            [1,0,1],
+            [0,1,0],
+            [1,0,1],
+        ];
+        let result_matrix: [[u8; 3]; 3] = [
+            [0,1,0],
+            [1,0,1],
+            [0,1,0],
+        ];
+        
+        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
+
+        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+               
+        assert_eq!(matrix, result_matrix);
+    }
+
+    #[test]
+    fn simple_repetitive_pattern() {
+        let mut matrix: [[u8; 3]; 3] = [
+            [0,1,0],
+            [0,1,0],
+            [0,1,0],
+        ];
+        let matrix_pattern_1: [[u8; 3]; 3] = [
+            [0,0,0],
+            [1,1,1],
+            [0,0,0],
+        ];
+        let matrix_pattern_2: [[u8; 3]; 3] = [
+            [0,1,0],
+            [0,1,0],
+            [0,1,0],
+        ];
+        
+        // Start of first iteration
+        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
+        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+               
+        assert_eq!(matrix, matrix_pattern_1);
+
+        // Start of second iteration
+        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
+        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+               
+        assert_eq!(matrix, matrix_pattern_2);
+
+        // Start of third iteration
+        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
+        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+               
+        assert_eq!(matrix, matrix_pattern_1);
+    }
+
+
+    #[test]
+    fn three_neighbours_cell_survives_forever() {
+        let mut matrix: [[u8; 3]; 3] = [
+            [0,0,0],
+            [0,1,1],
+            [0,1,1],
+        ];
+        let result_matrix: [[u8; 3]; 3] = [
+            [0,0,0],
+            [0,1,1],
+            [0,1,1],
+        ];
+    
+        // Start of first iteration
+        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
+        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+               
+        assert_eq!(matrix, result_matrix);
+
+        // Start of second iteration
+        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
+        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+            
+        assert_eq!(matrix, result_matrix);
+
+        // Start of third iteration
+        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
+        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+            
+        assert_eq!(matrix, result_matrix);
+    }
+
+}
