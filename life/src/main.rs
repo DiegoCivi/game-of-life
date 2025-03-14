@@ -1,6 +1,7 @@
 use macroquad::{color::{BLUE, RED, WHITE}, shapes::draw_rectangle, window::{clear_background, next_frame, screen_height, screen_width}};
 
 const N: usize = 4;
+const M: usize = 4;
 const OFFSETS: [i8; 3] = [-1, 0, 1];
 const DEAD: u8 = 0;
 const ALIVE: u8 = 1;
@@ -47,13 +48,13 @@ fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: [[u8; N]; N])
     alive_neighbours
 }
 
-fn draw_cells_grid(cell_size: f32) {
-    for i in 0..N {
-        let y = cell_size * i as f32;
+fn draw_cells_grid(cell_witdh: f32, cell_height: f32) {
+    for i in 0..M {
+        let y = cell_height * i as f32;
         for j in 0..N {
-            let x = cell_size * j as f32;
+            let x = cell_witdh * j as f32;
             let color = if (i + j) % 2 != 0 { RED } else { BLUE };
-            draw_rectangle(x, y, cell_size, cell_size, color);
+            draw_rectangle(x, y, cell_witdh, cell_height, color);
         }
     }
 }
@@ -68,11 +69,12 @@ async fn main() {
         [0,0,0,0],
         ];
 
-    let game_size = screen_width().min(screen_height());    
-    let cell_size = game_size / N as f32;
+    // let game_size = screen_width().min(screen_height());    
+    let cell_width = screen_width() / N as f32;
+    let cell_height = screen_height() / M as f32;
     loop {
         clear_background(WHITE);
-        draw_cells_grid(cell_size);
+        draw_cells_grid(cell_width, cell_height);
 
         let mut cells_to_revive: Vec<(usize, usize)> = Vec::new();
         let mut cells_to_kill: Vec<(usize, usize)> = Vec::new();
