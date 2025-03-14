@@ -2,8 +2,8 @@ use std::{thread::sleep, time::Duration};
 
 const N: usize = 3;
 const OFFSETS: [i8; 3] = [-1, 0, 1];
-const DEAD: u8 = 0;
-const ALIVE: u8 = 1;
+const DEAD: bool = false;
+const ALIVE: bool = true;
 
 /// Verifies if the position represented by the point ('row_i', 'col_i') is inside
 /// the matrix. 
@@ -43,7 +43,7 @@ fn is_different_cell(row_i_1: i8, col_i_1: i8, row_i_2: i8, col_i_2: i8) -> bool
 /// - `cells`: A Vec which contains tuples that represent the cells in the amtrix to modify.
 /// - `state`: Represents wether the cell is alive or dead.
 /// - `matrix`: An array with arrays that represent the matrix which contains every cell.
-fn manage_cell_state(cells: Vec<(usize, usize)>, state: u8, matrix: &mut [[u8; N]; N]) {
+fn manage_cell_state(cells: Vec<(usize, usize)>, state: bool, matrix: &mut [[bool; N]; N]) {
     for (row_i, col_i) in cells {
         matrix[row_i][col_i] = state;
     }
@@ -60,7 +60,7 @@ fn manage_cell_state(cells: Vec<(usize, usize)>, state: u8, matrix: &mut [[u8; N
 /// # Returns
 /// 
 /// An `i32` that represents the number of alive neighbours.
-fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: &[[u8; N]; N]) -> i32 {
+fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: &[[bool; N]; N]) -> i32 {
     let mut alive_neighbours = 0;
     // This parsing is done here so we don't do it in every loop 
     let parsed_row_i = row_i as i8;
@@ -99,7 +99,7 @@ fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: &[[u8; N]; N]
 /// A tuple containing two `Vec<(usize, usize)>`. The first one represents all the cells
 /// that should be brought back to life, while the second vector represents all the cells
 /// that should be killed.
-fn check_cell_state(matrix: &[[u8; N]; N]) -> (Vec<(usize, usize)>, Vec<(usize, usize)>) {
+fn check_cell_state(matrix: &[[bool; N]; N]) -> (Vec<(usize, usize)>, Vec<(usize, usize)>) {
     let mut cells_to_revive: Vec<(usize, usize)> = Vec::new();
     let mut cells_to_kill: Vec<(usize, usize)> = Vec::new();
 
@@ -119,10 +119,10 @@ fn check_cell_state(matrix: &[[u8; N]; N]) -> (Vec<(usize, usize)>, Vec<(usize, 
 }
 
 fn main() {
-    let mut matrix: [[u8; N]; N] = [
-        [0,1,0],
-        [0,1,0],
-        [0,1,0],
+    let mut matrix: [[bool; N]; N] = [
+        [false,true,false],
+        [false,true,false],
+        [false,true,false],
     ];
     
     loop {
@@ -147,15 +147,15 @@ mod tests {
 
     #[test]
     fn alone_cell_dies() {
-        let mut matrix: [[u8; 3]; 3] = [
-            [0,0,0],
-            [0,1,0],
-            [0,0,0],
+        let mut matrix: [[bool; 3]; 3] = [
+            [false, false, false],
+            [false, true, false],
+            [false, false, false],
         ];
-        let result_matrix: [[u8; 3]; 3] = [
-            [0,0,0],
-            [0,0,0],
-            [0,0,0],
+        let result_matrix: [[bool; 3]; 3] = [
+            [false, false, false],
+            [false, false, false],
+            [false, false, false],
         ];
         
         let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
@@ -168,20 +168,20 @@ mod tests {
 
     #[test]
     fn two_neighbours_survives_then_dies() {
-        let mut matrix: [[u8; 3]; 3] = [
-            [0,0,1],
-            [0,1,0],
-            [1,0,0],
+        let mut matrix: [[bool; 3]; 3] = [
+            [false, false, true],
+            [false, true, false],
+            [true, false, false],
         ];
-        let result_one_iteration_matrix: [[u8; 3]; 3] = [
-            [0,0,0],
-            [0,1,0],
-            [0,0,0],
+        let result_one_iteration_matrix: [[bool; 3]; 3] = [
+            [false, false, false],
+            [false, true, false],
+            [false, false, false],
         ];
-        let result_two_iterations_matrix: [[u8; 3]; 3] = [
-            [0,0,0],
-            [0,0,0],
-            [0,0,0],
+        let result_two_iterations_matrix: [[bool; 3]; 3] = [
+            [false, false, false],
+            [false, false, false],
+            [false, false, false],
         ];
         
         // Start of first iteration
@@ -202,15 +202,15 @@ mod tests {
 
     #[test]
     fn only_one_neighbour_both_die() {
-        let mut matrix: [[u8; 3]; 3] = [
-            [0,1,0],
-            [0,1,0],
-            [0,0,0],
+        let mut matrix: [[bool; 3]; 3] = [
+            [false, true, false],
+            [false, true, false],
+            [false, false, false],
         ];
-        let result_matrix: [[u8; 3]; 3] = [
-            [0,0,0],
-            [0,0,0],
-            [0,0,0],
+        let result_matrix: [[bool; 3]; 3] = [
+            [false, false, false],
+            [false, false, false],
+            [false, false, false],
         ];
         
         let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
@@ -223,15 +223,15 @@ mod tests {
 
     #[test]
     fn four_neighbours_cell_dies() {
-        let mut matrix: [[u8; 3]; 3] = [
-            [1,0,1],
-            [0,1,0],
-            [1,0,1],
+        let mut matrix: [[bool; 3]; 3] = [
+            [true, false, true],
+            [false, true, false],
+            [true, false, true],
         ];
-        let result_matrix: [[u8; 3]; 3] = [
-            [0,1,0],
-            [1,0,1],
-            [0,1,0],
+        let result_matrix: [[bool; 3]; 3] = [
+            [false, true, false],
+            [true, false, true],
+            [false, true, false],
         ];
         
         let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
@@ -244,20 +244,20 @@ mod tests {
 
     #[test]
     fn simple_repetitive_pattern() {
-        let mut matrix: [[u8; 3]; 3] = [
-            [0,1,0],
-            [0,1,0],
-            [0,1,0],
+        let mut matrix: [[bool; 3]; 3] =[
+            [false, true, false],
+            [false, true, false],
+            [false, true, false],
         ];
-        let matrix_pattern_1: [[u8; 3]; 3] = [
-            [0,0,0],
-            [1,1,1],
-            [0,0,0],
+        let matrix_pattern_1: [[bool; 3]; 3] =[
+            [false, false, false],
+            [true, true, true],
+            [false, false, false],
         ];
-        let matrix_pattern_2: [[u8; 3]; 3] = [
-            [0,1,0],
-            [0,1,0],
-            [0,1,0],
+        let matrix_pattern_2: [[bool; 3]; 3] = [
+            [false, true, false],
+            [false, true, false],
+            [false, true, false],
         ];
         
         // Start of first iteration
@@ -285,15 +285,15 @@ mod tests {
 
     #[test]
     fn three_neighbours_cell_survives_forever() {
-        let mut matrix: [[u8; 3]; 3] = [
-            [0,0,0],
-            [0,1,1],
-            [0,1,1],
+        let mut matrix: [[bool; 3]; 3] = [
+            [false, false, false],
+            [false, true, true],
+            [false, true, true],
         ];
-        let result_matrix: [[u8; 3]; 3] = [
-            [0,0,0],
-            [0,1,1],
-            [0,1,1],
+        let result_matrix: [[bool; 3]; 3] = [
+            [false, false, false],
+            [false, true, true],
+            [false, true, true],
         ];
     
         // Start of first iteration
