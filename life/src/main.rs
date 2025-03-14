@@ -1,4 +1,4 @@
-use macroquad::{color::{BLUE, RED, WHITE}, shapes::draw_rectangle, window::{clear_background, next_frame, screen_height, screen_width, Conf}};
+use macroquad::{color::{BLACK, WHITE}, shapes::draw_rectangle, time::get_time, window::{clear_background, next_frame, screen_height, screen_width, Conf}};
 
 const N: usize = 3;
 const M: usize = 3;
@@ -89,12 +89,12 @@ fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: &[[bool; N]; 
     alive_neighbours
 }
 
-fn draw_cells_grid(cell_witdh: f32, cell_height: f32) {
-    for i in 0..M {
-        let y = cell_height * i as f32;
-        for j in 0..N {
-            let x = cell_witdh * j as f32;
-            let color = if (i + j) % 2 != 0 { RED } else { BLUE };
+fn draw_cells_grid(cell_witdh: f32, cell_height: f32, matrix: &[[bool; N]; N]) {
+    for (row_i, row) in matrix.iter().enumerate() {
+        let y = cell_height * row_i as f32;
+        for (col_i, cell) in row.iter().enumerate() {
+            let x = cell_witdh * col_i as f32;
+            let color = if *cell == ALIVE { BLACK } else { WHITE };
             draw_rectangle(x, y, cell_witdh, cell_height, color);
         }
     }
@@ -149,21 +149,26 @@ async fn main() {
     ];
     let cell_width = screen_width() / N as f32;
     let cell_height = screen_height() / M as f32;
+
+    let mut last_update = get_time();
     
     loop {
         clear_background(WHITE);
-        draw_cells_grid(cell_width, cell_height);
-        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-        
-        if cells_to_kill.is_empty() && cells_to_revive.is_empty() {
-            break;
+        draw_cells_grid(cell_width, cell_height, &matrix);
+        if get_time() - last_update > 2. {
+            last_update = get_time();
+            let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
+            
+            if cells_to_kill.is_empty() && cells_to_revive.is_empty() {
+                break;
+            }
+    
+            manage_cell_state(cells_to_kill, DEAD, &mut matrix);
+            manage_cell_state(cells_to_revive, ALIVE, &mut matrix);
+
         }
 
-        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(cells_to_revive, ALIVE, &mut matrix);
-
         next_frame().await;
-        // This sleep is to make the output more readeable
     }
 
 }
