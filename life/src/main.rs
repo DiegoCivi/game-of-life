@@ -29,7 +29,7 @@ const INSTRUCTIONS_TEXT_SIZE: f32 = 30.;
 /// 
 /// A `bool` indicating if this is true or not.
 fn is_position_valid(row_i: i8, col_i: i8) -> bool {
-    (row_i >= 0 && row_i < ROWS as i8) && (col_i >= 0 && col_i < ROWS as i8)
+    (row_i >= 0 && row_i < ROWS as i8) && (col_i >= 0 && col_i < COLS as i8)
 }
 
 /// Verifies if 2 points on the matrix are the same point. 
@@ -55,7 +55,7 @@ fn is_different_cell(row_i_1: i8, col_i_1: i8, row_i_2: i8, col_i_2: i8) -> bool
 /// - `cells`: A Vec which contains tuples that represent the cells in the amtrix to modify.
 /// - `state`: Represents wether the cell is alive or dead.
 /// - `matrix`: An array with arrays that represent the matrix which contains every cell.
-fn manage_cell_state(cells: Vec<(usize, usize)>, state: bool, matrix: &mut [[bool; ROWS]; ROWS]) {
+fn manage_cell_state(cells: Vec<(usize, usize)>, state: bool, matrix: &mut [[bool; COLS]; ROWS]) {
     for (row_i, col_i) in cells {
         matrix[row_i][col_i] = state;
     }
@@ -72,7 +72,7 @@ fn manage_cell_state(cells: Vec<(usize, usize)>, state: bool, matrix: &mut [[boo
 /// # Returns
 /// 
 /// An `i32` that represents the number of alive neighbours.
-fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: &[[bool; ROWS]; ROWS]) -> i32 {
+fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: &[[bool; COLS]; ROWS]) -> i32 {
     let mut alive_neighbours = 0;
     // This parsing is done here so we don't do it in every loop 
     let parsed_row_i = row_i as i8;
@@ -107,7 +107,7 @@ fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: &[[bool; ROWS
 /// - `cell_witdh`: The width of a single cell of the matrix.
 /// - `cell_height`: The height of a single cell of the matrix.
 /// - `matrix`: An array with arrays that represent the matrix which contains every cell.
-fn draw_cells_grid(cell_witdh: f32, cell_height: f32, matrix: &[[bool; ROWS]; ROWS]) {
+fn draw_cells_grid(cell_witdh: f32, cell_height: f32, matrix: &[[bool; COLS]; ROWS]) {
     for (row_i, row) in matrix.iter().enumerate() {
         let y = cell_height * row_i as f32;
         for (col_i, cell) in row.iter().enumerate() {
@@ -143,7 +143,7 @@ fn window_conf() -> Conf {
 /// A tuple containing two `Vec<(usize, usize)>`. The first one represents all the cells
 /// that should be brought back to life, while the second vector represents all the cells
 /// that should be killed.
-fn check_cell_state(matrix: &[[bool; ROWS]; ROWS]) -> (Vec<(usize, usize)>, Vec<(usize, usize)>) {
+fn check_cell_state(matrix: &[[bool; COLS]; ROWS]) -> (Vec<(usize, usize)>, Vec<(usize, usize)>) {
     let mut cells_to_revive: Vec<(usize, usize)> = Vec::new();
     let mut cells_to_kill: Vec<(usize, usize)> = Vec::new();
 
@@ -192,7 +192,7 @@ fn calculate_cell_position_from_mouse(mouse_x: f32, mouse_y: f32, cell_witdh: f3
 /// - `row_i`: Represents the row in the matrix of the cell to change.
 /// - `col_i`: Represents the col in the matrix of the cell to change.
 /// - `matrix`: An array with arrays that represent the matrix which contains every cell.
-fn change_cell_state(row_i: usize, col_i: usize, matrix: &mut [[bool; ROWS]; ROWS]) {
+fn change_cell_state(row_i: usize, col_i: usize, matrix: &mut [[bool; COLS]; ROWS]) {
     let curr_state = matrix[row_i][col_i];
     let new_state = if curr_state == ALIVE { DEAD } else { ALIVE };
     matrix[row_i][col_i] = new_state
@@ -210,7 +210,7 @@ fn show_text() {
 /// - `cell_width`: Width size of a single matrix cell.
 /// - `cell_height`: Height size of a single matrix cell.
 /// - `matrix`: An array with arrays that represent the matrix which contains every cell.
-fn setup_frame(cell_width: f32, cell_height: f32, matrix: &[[bool; ROWS]; ROWS]) {
+fn setup_frame(cell_width: f32, cell_height: f32, matrix: &[[bool; COLS]; ROWS]) {
     clear_background(RED);
     draw_cells_grid(cell_width, cell_height, &matrix);
     draw_grid_lines(cell_width, cell_height);
@@ -235,7 +235,9 @@ fn draw_grid_lines(cell_width: f32, cell_height: f32) {
         x2 = x1;
         y2 = GRID_HEIGHT;
         draw_line(x1, y1, x2, y2, 2., LIGHTGRAY);
-
+    }
+    
+    for i in 0..COLS {
         // Horizontal line. It only moves on the Y axis by a step of cell_height.
         x1 = 0.;
         y1 = cell_height * i as f32;
@@ -247,7 +249,7 @@ fn draw_grid_lines(cell_width: f32, cell_height: f32) {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let mut matrix: [[bool; ROWS]; ROWS] = [[DEAD; ROWS]; COLS];
+    let mut matrix: [[bool; COLS]; ROWS] = [[DEAD; COLS]; ROWS];
     let mut begin_life = false;
     // Calculation of cell dimensions so the whole screen is used.
     let cell_width = GRID_WIDTH / ROWS as f32;
