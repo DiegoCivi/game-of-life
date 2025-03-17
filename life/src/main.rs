@@ -252,8 +252,8 @@ async fn main() {
     let mut matrix: [[bool; COLS]; ROWS] = [[DEAD; COLS]; ROWS];
     let mut begin_life = false;
     // Calculation of cell dimensions so the whole screen is used.
-    let cell_width = GRID_WIDTH / ROWS as f32;
-    let cell_height = GRID_HEIGHT / COLS as f32;
+    let cell_width = GRID_WIDTH / COLS as f32;
+    let cell_height = GRID_HEIGHT / ROWS as f32;
     // Used for updating each frame after a desired time
     let mut last_update = get_time();
     loop {
