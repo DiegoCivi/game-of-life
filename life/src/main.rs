@@ -280,12 +280,15 @@ async fn main() {
             }
 
         }
+        // Catches whenever the user presses the 'Enter' to change the game state
         if let Some(key_pressed) = get_last_key_pressed() {
             match key_pressed {
                 KeyCode::Enter => begin_life = !begin_life,
                 _=> {}
             }
         }
+        // We show the text here at the end because for some reason if we put it in setup_frame()
+        // it will not appear on the screen.
         show_text();
         next_frame().await;
     }
