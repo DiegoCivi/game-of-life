@@ -1,4 +1,4 @@
-use macroquad::{color::{BLACK, WHITE}, shapes::draw_rectangle, time::get_time, window::{clear_background, next_frame, screen_height, screen_width, Conf}};
+use macroquad::{color::{BLACK, WHITE}, input::{is_mouse_button_down, mouse_position}, shapes::draw_rectangle, time::get_time, window::{clear_background, next_frame, screen_height, screen_width, Conf}};
 
 const N: usize = 3;
 const M: usize = 3;
@@ -151,6 +151,18 @@ fn check_cell_state(matrix: &[[bool; N]; N]) -> (Vec<(usize, usize)>, Vec<(usize
     (cells_to_revive, cells_to_kill)
 }
 
+fn calculate_cell_position_from_mouse(mouse_x: f32, mouse_y: f32, cell_witdh: f32, cell_height: f32) -> (usize, usize) {
+    let row_i = mouse_y / cell_witdh;
+    let col_i = mouse_x / cell_height;
+    (row_i as usize, col_i as usize)
+}
+
+fn change_cell_state(row_i: usize, col_i: usize, matrix: &mut [[bool; N]; N]) {
+    let curr_state = matrix[row_i][col_i];
+    let new_state = if curr_state == ALIVE { DEAD } else { ALIVE };
+    matrix[row_i][col_i] = new_state
+}
+
 
 #[macroquad::main(window_conf)]
 async fn main() {
@@ -159,29 +171,35 @@ async fn main() {
         [false,true,false],
         [false,true,false],
     ];
+    let begin_life = false;
     // Calculation of cell dimensions so the whole screen is used.
     let cell_width = screen_width() / N as f32;
     let cell_height = screen_height() / M as f32;
     // Used for updating each frame after a desired time
     let mut last_update = get_time();
-    
+    println!("width: {:?}   height: {:?}", cell_width, cell_height);
     loop {
         clear_background(WHITE);
         draw_cells_grid(cell_width, cell_height, &matrix);
         // After 2 seconds, the matrix is changed so it updates in the next frame
-        if get_time() - last_update > 2. {
+        if get_time() - last_update > 0.5 { 
             last_update = get_time();
-            let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-            
-            if cells_to_kill.is_empty() && cells_to_revive.is_empty() {
-                break;
+
+            // If the life didn't began, it means the player is still choosing
+            // which cell pattern to start with
+            if !begin_life {
+                if is_mouse_button_down(macroquad::input::MouseButton::Left) {
+                    let (mouse_x, mouse_y) = mouse_position();
+                    let (row_i, col_i) = calculate_cell_position_from_mouse(mouse_x, mouse_y, cell_width, cell_height);
+                    change_cell_state(row_i, col_i, &mut matrix);
+                    println!("({:?}, {:?}) -> ({:?}, {:?})", mouse_x, mouse_y,row_i, col_i);
+                }
+            } else { // If the life began, cells need to start dying and reviving
+                let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
+                manage_cell_state(cells_to_kill, DEAD, &mut matrix);
+                manage_cell_state(cells_to_revive, ALIVE, &mut matrix);
             }
-    
-            manage_cell_state(cells_to_kill, DEAD, &mut matrix);
-            manage_cell_state(cells_to_revive, ALIVE, &mut matrix);
-
         }
-
         next_frame().await;
     }
 
