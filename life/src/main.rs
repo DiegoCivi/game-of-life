@@ -151,12 +151,31 @@ fn check_cell_state(matrix: &[[bool; N]; N]) -> (Vec<(usize, usize)>, Vec<(usize
     (cells_to_revive, cells_to_kill)
 }
 
+/// Calculates which cell is the user choosing with its mouse
+/// 
+/// # Arguments
+/// 
+/// - `mouse_x`: Position on the X axis of the mouse.
+/// - `mouse_y`: Position on the Y axis of the mouse.
+/// - `cell_width`: Width size of a single matrix cell.
+/// - `cell_height`: Height size of a single matrix cell.
+/// 
+/// # Returns
+/// 
+/// A tuple of usize in the format of (row, column) containing the mapped matrix cell. 
 fn calculate_cell_position_from_mouse(mouse_x: f32, mouse_y: f32, cell_witdh: f32, cell_height: f32) -> (usize, usize) {
     let row_i = mouse_y / cell_witdh;
     let col_i = mouse_x / cell_height;
     (row_i as usize, col_i as usize)
 }
 
+/// Changes the cell state to the opposite of its current one
+/// 
+/// # Arguments
+/// 
+/// - `row_i`: Represents the row in the matrix of the cell to change.
+/// - `col_i`: Represents the col in the matrix of the cell to change.
+/// - `matrix`: An array with arrays that represent the matrix which contains every cell.
 fn change_cell_state(row_i: usize, col_i: usize, matrix: &mut [[bool; N]; N]) {
     let curr_state = matrix[row_i][col_i];
     let new_state = if curr_state == ALIVE { DEAD } else { ALIVE };
