@@ -1,6 +1,7 @@
-use std::{thread::sleep, time::Duration};
+use macroquad::{color::{BLACK, WHITE}, shapes::draw_rectangle, time::get_time, window::{clear_background, next_frame, screen_height, screen_width, Conf}};
 
 const N: usize = 3;
+const M: usize = 3;
 const OFFSETS: [i8; 3] = [-1, 0, 1];
 const DEAD: bool = false;
 const ALIVE: bool = true;
@@ -88,6 +89,38 @@ fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: &[[bool; N]; 
     alive_neighbours
 }
 
+/// Draws a rectangle for each cell in the matrix, forming the necessary grid on the screen
+/// 
+/// # Arguments
+/// 
+/// - `cell_witdh`: The width of a single cell of the matrix.
+/// - `cell_height`: The height of a single cell of the matrix.
+/// - `matrix`: An array with arrays that represent the matrix which contains every cell.
+fn draw_cells_grid(cell_witdh: f32, cell_height: f32, matrix: &[[bool; N]; N]) {
+    for (row_i, row) in matrix.iter().enumerate() {
+        let y = cell_height * row_i as f32;
+        for (col_i, cell) in row.iter().enumerate() {
+            let x = cell_witdh * col_i as f32;
+            let color = if *cell == ALIVE { BLACK } else { WHITE };
+            draw_rectangle(x, y, cell_witdh, cell_height, color);
+        }
+    }
+}
+
+/// Sets the configuration of the screen used.
+/// 
+/// # Returns
+/// 
+/// A struct `Conf` with the configuration needed
+fn window_conf() -> Conf {
+    Conf {
+        window_title: "Game of Life".to_owned(),
+        window_width: 800,
+        window_height: 800,
+        ..Default::default()
+    }
+}
+
 /// Checks which cells should be revived and which cells should be killed.
 /// 
 /// # Arguments
@@ -118,25 +151,38 @@ fn check_cell_state(matrix: &[[bool; N]; N]) -> (Vec<(usize, usize)>, Vec<(usize
     (cells_to_revive, cells_to_kill)
 }
 
-fn main() {
+
+#[macroquad::main(window_conf)]
+async fn main() {
     let mut matrix: [[bool; N]; N] = [
         [false,true,false],
         [false,true,false],
         [false,true,false],
     ];
+    // Calculation of cell dimensions so the whole screen is used.
+    let cell_width = screen_width() / N as f32;
+    let cell_height = screen_height() / M as f32;
+    // Used for updating each frame after a desired time
+    let mut last_update = get_time();
     
     loop {
-        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-        
-        if cells_to_kill.is_empty() && cells_to_revive.is_empty() {
-            break;
+        clear_background(WHITE);
+        draw_cells_grid(cell_width, cell_height, &matrix);
+        // After 2 seconds, the matrix is changed so it updates in the next frame
+        if get_time() - last_update > 2. {
+            last_update = get_time();
+            let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
+            
+            if cells_to_kill.is_empty() && cells_to_revive.is_empty() {
+                break;
+            }
+    
+            manage_cell_state(cells_to_kill, DEAD, &mut matrix);
+            manage_cell_state(cells_to_revive, ALIVE, &mut matrix);
+
         }
 
-        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(cells_to_revive, ALIVE, &mut matrix);
-
-        // This sleep is to make the output more readeable
-        sleep(Duration::from_secs(5));
+        next_frame().await;
     }
 
 }
