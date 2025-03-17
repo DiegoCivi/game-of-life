@@ -1,4 +1,4 @@
-use macroquad::{color::{BLACK, WHITE}, input::{is_mouse_button_down, mouse_position}, shapes::draw_rectangle, time::get_time, window::{clear_background, next_frame, screen_height, screen_width, Conf}};
+use macroquad::{color::{BLACK, WHITE}, input::{get_last_key_pressed, is_mouse_button_down, mouse_position, KeyCode}, shapes::draw_rectangle, time::get_time, window::{clear_background, next_frame, screen_height, screen_width, Conf}};
 
 const N: usize = 3;
 const M: usize = 3;
@@ -171,7 +171,7 @@ async fn main() {
         [false,true,false],
         [false,true,false],
     ];
-    let begin_life = false;
+    let mut begin_life = false;
     // Calculation of cell dimensions so the whole screen is used.
     let cell_width = screen_width() / N as f32;
     let cell_height = screen_height() / M as f32;
@@ -195,9 +195,17 @@ async fn main() {
                     println!("({:?}, {:?}) -> ({:?}, {:?})", mouse_x, mouse_y,row_i, col_i);
                 }
             } else { // If the life began, cells need to start dying and reviving
+                println!("Empezo la vida");
                 let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
                 manage_cell_state(cells_to_kill, DEAD, &mut matrix);
                 manage_cell_state(cells_to_revive, ALIVE, &mut matrix);
+            }
+
+        }
+        if let Some(key_pressed) = get_last_key_pressed() {
+            match key_pressed {
+                KeyCode::Enter => begin_life = true,
+                _=> {}
             }
         }
         next_frame().await;
