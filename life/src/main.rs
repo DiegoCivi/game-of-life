@@ -1,10 +1,21 @@
-use macroquad::{color::{BLACK, WHITE}, input::{get_last_key_pressed, is_mouse_button_down, mouse_position, KeyCode}, shapes::draw_rectangle, time::get_time, window::{clear_background, next_frame, screen_height, screen_width, Conf}};
+use macroquad::{color::{BLACK, RED, WHITE}, input::{get_last_key_pressed, is_mouse_button_down, mouse_position, KeyCode}, shapes::draw_rectangle, text::draw_text, time::get_time, window::{clear_background, next_frame, Conf}};
 
-const N: usize = 3;
-const M: usize = 3;
+const ROWS: usize = 3;
+const COLS: usize = 3;
 const OFFSETS: [i8; 3] = [-1, 0, 1];
 const DEAD: bool = false;
 const ALIVE: bool = true;
+const FRAME_DELAY: f64 = 0.3;
+const WINDOW_HEIGHT: i32 = 700;
+const WINDOW_WIDTH: i32 = 800;
+const GRID_HEIGHT: f32 = WINDOW_HEIGHT as f32 - BUTTON_TAB_HEIGHT;
+const GRID_WIDTH: f32 = 800.;
+const BUTTON_TAB_HEIGHT: f32 = 100.;
+const INSTRUCTIONS_TEXT: &str = "To play press 'ENTER'";
+const INSTRUCTIONS_TEXT_X: f32 = 250.;
+const INSTRUCTIONS_TEXT_Y: f32 = 650.;
+const INSTRUCTIONS_TEXT_SIZE: f32 = 30.;
+
 
 /// Verifies if the position represented by the point ('row_i', 'col_i') is inside
 /// the matrix. 
@@ -18,7 +29,7 @@ const ALIVE: bool = true;
 /// 
 /// A `bool` indicating if this is true or not.
 fn is_position_valid(row_i: i8, col_i: i8) -> bool {
-    (row_i >= 0 && row_i < N as i8) && (col_i >= 0 && col_i < N as i8)
+    (row_i >= 0 && row_i < ROWS as i8) && (col_i >= 0 && col_i < ROWS as i8)
 }
 
 /// Verifies if 2 points on the matrix are the same point. 
@@ -44,7 +55,7 @@ fn is_different_cell(row_i_1: i8, col_i_1: i8, row_i_2: i8, col_i_2: i8) -> bool
 /// - `cells`: A Vec which contains tuples that represent the cells in the amtrix to modify.
 /// - `state`: Represents wether the cell is alive or dead.
 /// - `matrix`: An array with arrays that represent the matrix which contains every cell.
-fn manage_cell_state(cells: Vec<(usize, usize)>, state: bool, matrix: &mut [[bool; N]; N]) {
+fn manage_cell_state(cells: Vec<(usize, usize)>, state: bool, matrix: &mut [[bool; ROWS]; ROWS]) {
     for (row_i, col_i) in cells {
         matrix[row_i][col_i] = state;
     }
@@ -61,7 +72,7 @@ fn manage_cell_state(cells: Vec<(usize, usize)>, state: bool, matrix: &mut [[boo
 /// # Returns
 /// 
 /// An `i32` that represents the number of alive neighbours.
-fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: &[[bool; N]; N]) -> i32 {
+fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: &[[bool; ROWS]; ROWS]) -> i32 {
     let mut alive_neighbours = 0;
     // This parsing is done here so we don't do it in every loop 
     let parsed_row_i = row_i as i8;
@@ -96,7 +107,7 @@ fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: &[[bool; N]; 
 /// - `cell_witdh`: The width of a single cell of the matrix.
 /// - `cell_height`: The height of a single cell of the matrix.
 /// - `matrix`: An array with arrays that represent the matrix which contains every cell.
-fn draw_cells_grid(cell_witdh: f32, cell_height: f32, matrix: &[[bool; N]; N]) {
+fn draw_cells_grid(cell_witdh: f32, cell_height: f32, matrix: &[[bool; ROWS]; ROWS]) {
     for (row_i, row) in matrix.iter().enumerate() {
         let y = cell_height * row_i as f32;
         for (col_i, cell) in row.iter().enumerate() {
@@ -115,8 +126,8 @@ fn draw_cells_grid(cell_witdh: f32, cell_height: f32, matrix: &[[bool; N]; N]) {
 fn window_conf() -> Conf {
     Conf {
         window_title: "Game of Life".to_owned(),
-        window_width: 800,
-        window_height: 800,
+        window_width: WINDOW_WIDTH,
+        window_height: WINDOW_HEIGHT,
         ..Default::default()
     }
 }
@@ -132,7 +143,7 @@ fn window_conf() -> Conf {
 /// A tuple containing two `Vec<(usize, usize)>`. The first one represents all the cells
 /// that should be brought back to life, while the second vector represents all the cells
 /// that should be killed.
-fn check_cell_state(matrix: &[[bool; N]; N]) -> (Vec<(usize, usize)>, Vec<(usize, usize)>) {
+fn check_cell_state(matrix: &[[bool; ROWS]; ROWS]) -> (Vec<(usize, usize)>, Vec<(usize, usize)>) {
     let mut cells_to_revive: Vec<(usize, usize)> = Vec::new();
     let mut cells_to_kill: Vec<(usize, usize)> = Vec::new();
 
@@ -151,7 +162,7 @@ fn check_cell_state(matrix: &[[bool; N]; N]) -> (Vec<(usize, usize)>, Vec<(usize
     (cells_to_revive, cells_to_kill)
 }
 
-/// Calculates which cell is the user choosing with its mouse
+/// Calculates which cell is the user choosing with its mouse. 
 /// 
 /// # Arguments
 /// 
@@ -163,10 +174,15 @@ fn check_cell_state(matrix: &[[bool; N]; N]) -> (Vec<(usize, usize)>, Vec<(usize
 /// # Returns
 /// 
 /// A tuple of usize in the format of (row, column) containing the mapped matrix cell. 
-fn calculate_cell_position_from_mouse(mouse_x: f32, mouse_y: f32, cell_witdh: f32, cell_height: f32) -> (usize, usize) {
-    let row_i = mouse_y / cell_witdh;
-    let col_i = mouse_x / cell_height;
-    (row_i as usize, col_i as usize)
+fn calculate_cell_position_from_mouse(mouse_x: f32, mouse_y: f32, cell_witdh: f32, cell_height: f32) -> Option<(usize, usize)> {
+    // Since the height of the grid is not the same as the one 
+    // of the screen we have to take this into account when we check the Y axis (the rows).
+    if mouse_y > GRID_HEIGHT {
+        return None;
+    }
+    let row_i = mouse_y / cell_height;
+    let col_i = mouse_x / cell_witdh;
+    Some((row_i as usize, col_i as usize))
 }
 
 /// Changes the cell state to the opposite of its current one
@@ -176,32 +192,44 @@ fn calculate_cell_position_from_mouse(mouse_x: f32, mouse_y: f32, cell_witdh: f3
 /// - `row_i`: Represents the row in the matrix of the cell to change.
 /// - `col_i`: Represents the col in the matrix of the cell to change.
 /// - `matrix`: An array with arrays that represent the matrix which contains every cell.
-fn change_cell_state(row_i: usize, col_i: usize, matrix: &mut [[bool; N]; N]) {
+fn change_cell_state(row_i: usize, col_i: usize, matrix: &mut [[bool; ROWS]; ROWS]) {
     let curr_state = matrix[row_i][col_i];
     let new_state = if curr_state == ALIVE { DEAD } else { ALIVE };
     matrix[row_i][col_i] = new_state
 }
 
+/// Simple text drawing with the instructions for the user
+fn show_text() {
+    draw_text(INSTRUCTIONS_TEXT, INSTRUCTIONS_TEXT_X, INSTRUCTIONS_TEXT_Y, INSTRUCTIONS_TEXT_SIZE, BLACK);
+}
+
+/// Necessary setup for each frame, containing the drawing of the grid.
+/// 
+/// # Arguments
+/// 
+/// - `cell_width`: Width size of a single matrix cell.
+/// - `cell_height`: Height size of a single matrix cell.
+/// - `matrix`: An array with arrays that represent the matrix which contains every cell.
+fn setup_frame(cell_width: f32, cell_height: f32, matrix: &[[bool; ROWS]; ROWS]) {
+    clear_background(RED);
+    draw_cells_grid(cell_width, cell_height, &matrix);
+}
+
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let mut matrix: [[bool; N]; N] = [
-        [false,true,false],
-        [false,true,false],
-        [false,true,false],
-    ];
+    let mut matrix: [[bool; ROWS]; ROWS] = [[DEAD; ROWS]; COLS];
     let mut begin_life = false;
     // Calculation of cell dimensions so the whole screen is used.
-    let cell_width = screen_width() / N as f32;
-    let cell_height = screen_height() / M as f32;
+    let cell_width = GRID_WIDTH / ROWS as f32;
+    let cell_height = GRID_HEIGHT / COLS as f32;
     // Used for updating each frame after a desired time
     let mut last_update = get_time();
-    println!("width: {:?}   height: {:?}", cell_width, cell_height);
     loop {
-        clear_background(WHITE);
-        draw_cells_grid(cell_width, cell_height, &matrix);
+        setup_frame(cell_width, cell_height, &matrix);
+        
         // After 2 seconds, the matrix is changed so it updates in the next frame
-        if get_time() - last_update > 0.5 { 
+        if get_time() - last_update > FRAME_DELAY { 
             last_update = get_time();
 
             // If the life didn't began, it means the player is still choosing
@@ -209,12 +237,12 @@ async fn main() {
             if !begin_life {
                 if is_mouse_button_down(macroquad::input::MouseButton::Left) {
                     let (mouse_x, mouse_y) = mouse_position();
-                    let (row_i, col_i) = calculate_cell_position_from_mouse(mouse_x, mouse_y, cell_width, cell_height);
-                    change_cell_state(row_i, col_i, &mut matrix);
-                    println!("({:?}, {:?}) -> ({:?}, {:?})", mouse_x, mouse_y,row_i, col_i);
+                    match calculate_cell_position_from_mouse(mouse_x, mouse_y, cell_width, cell_height) {
+                        Some((row_i, col_i)) => change_cell_state(row_i, col_i, &mut matrix),
+                        None => {},
+                    }
                 }
             } else { // If the life began, cells need to start dying and reviving
-                println!("Empezo la vida");
                 let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
                 manage_cell_state(cells_to_kill, DEAD, &mut matrix);
                 manage_cell_state(cells_to_revive, ALIVE, &mut matrix);
@@ -227,6 +255,7 @@ async fn main() {
                 _=> {}
             }
         }
+        show_text();
         next_frame().await;
     }
 
