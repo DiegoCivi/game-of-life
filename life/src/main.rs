@@ -1,4 +1,4 @@
-use macroquad::{color::{BLACK, RED, WHITE}, input::{get_last_key_pressed, is_mouse_button_down, mouse_position, KeyCode}, shapes::draw_rectangle, text::draw_text, time::get_time, window::{clear_background, next_frame, Conf}};
+use macroquad::{color::{BLACK, LIGHTGRAY, RED, WHITE}, input::{get_last_key_pressed, is_mouse_button_down, mouse_position, KeyCode}, shapes::{draw_line, draw_rectangle}, text::draw_text, time::get_time, window::{clear_background, next_frame, Conf}};
 
 const ROWS: usize = 3;
 const COLS: usize = 3;
@@ -11,8 +11,8 @@ const WINDOW_WIDTH: i32 = 800;
 const GRID_HEIGHT: f32 = WINDOW_HEIGHT as f32 - BUTTON_TAB_HEIGHT;
 const GRID_WIDTH: f32 = 800.;
 const BUTTON_TAB_HEIGHT: f32 = 100.;
-const INSTRUCTIONS_TEXT: &str = "To play press 'ENTER'";
-const INSTRUCTIONS_TEXT_X: f32 = 250.;
+const INSTRUCTIONS_TEXT: &str = "To start or stop press 'ENTER'";
+const INSTRUCTIONS_TEXT_X: f32 = 200.;
 const INSTRUCTIONS_TEXT_Y: f32 = 650.;
 const INSTRUCTIONS_TEXT_SIZE: f32 = 30.;
 
@@ -213,8 +213,37 @@ fn show_text() {
 fn setup_frame(cell_width: f32, cell_height: f32, matrix: &[[bool; ROWS]; ROWS]) {
     clear_background(RED);
     draw_cells_grid(cell_width, cell_height, &matrix);
+    draw_grid_lines(cell_width, cell_height);
 }
 
+/// Draws the lines of the grid.
+/// 
+/// # Arguments
+/// 
+/// - `cell_width`: Width size of a single matrix cell.
+/// - `cell_height`: Height size of a single matrix cell.
+fn draw_grid_lines(cell_width: f32, cell_height: f32) {
+    let mut x1: f32;
+    let mut y1: f32;
+    let mut x2: f32;
+    let mut y2: f32;
+
+    for i in 0..ROWS {
+        // Vertical line. It only moves on the X axis by a step of cell_width.
+        x1 = cell_width * i as f32;
+        y1 = 0.;
+        x2 = x1;
+        y2 = GRID_HEIGHT;
+        draw_line(x1, y1, x2, y2, 2., LIGHTGRAY);
+
+        // Horizontal line. It only moves on the Y axis by a step of cell_height.
+        x1 = 0.;
+        y1 = cell_height * i as f32;
+        x2 = GRID_WIDTH;
+        y2 = y1;
+        draw_line(x1, y1, x2, y2, 2., LIGHTGRAY);
+    }
+}
 
 #[macroquad::main(window_conf)]
 async fn main() {
@@ -251,7 +280,7 @@ async fn main() {
         }
         if let Some(key_pressed) = get_last_key_pressed() {
             match key_pressed {
-                KeyCode::Enter => begin_life = true,
+                KeyCode::Enter => begin_life = !begin_life,
                 _=> {}
             }
         }
