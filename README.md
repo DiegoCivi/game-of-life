@@ -6,4 +6,7 @@ This project uses:
  -  Rust 1.85.0
  -  Macroquad 0.4
 
-To execute the project you should run `cargo run`.
+### How to
+To execute the project you should run `make play`.
+
+To execute tests you should run `make test`.
