@@ -23,7 +23,7 @@ const BUTTON_TAB_HEIGHT: f32 = 100.;
 /// # Returns
 /// 
 /// A struct `Conf` with the configuration needed
-pub fn window_conf() -> Conf {
+fn window_conf() -> Conf {
     Conf {
         window_title: "Game of Life".to_owned(),
         window_width: WINDOW_WIDTH,
