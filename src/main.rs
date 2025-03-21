@@ -223,7 +223,7 @@ fn window_conf() -> Conf {
     }
 }
 
-/// Calculates which cell is the user choosing with its mouse. 
+/// Calculates which cell is the user choosing with their mouse. 
 /// 
 /// # Arguments
 /// 
@@ -315,7 +315,7 @@ async fn main() {
         if get_time() - last_update > FRAME_DELAY { 
             last_update = get_time();
 
-            // If the life didn't began, it means the player is still choosing
+            // If the life didn't begin, it means the player is still choosing
             // which cell pattern to start with
             if !begin_life {
                 if is_mouse_button_down(macroquad::input::MouseButton::Left) {
