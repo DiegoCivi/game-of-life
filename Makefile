@@ -1,14 +1,14 @@
 test:
-	cargo test --manifest-path ./life/Cargo.toml
+	cargo test
 
 play: 
-	cargo run --manifest-path ./life/Cargo.toml --release
+	cargo run
 
 clean:
-	cargo clean --manifest-path ./life/Cargo.toml
+	cargo clean
 
 build:
-	cargo build --manifest-path ./life/Cargo.toml
+	cargo build
 
 run: 
-	cargo run --manifest-path ./life/Cargo.toml
+	cargo run
