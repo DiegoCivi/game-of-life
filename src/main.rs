@@ -1,7 +1,6 @@
 use macroquad::{color::{BLACK, LIGHTGRAY, RED, WHITE}, input::{get_last_key_pressed, is_mouse_button_down, mouse_position, KeyCode}, shapes::{draw_line, draw_rectangle}, text::draw_text, time::get_time, window::{clear_background, next_frame, Conf}};
 
-const ROWS: usize = 3;
-const COLS: usize = 3;
+const DIMENSION: usize = 3;
 const OFFSETS: [i8; 3] = [-1, 0, 1];
 const DEAD: bool = false;
 const ALIVE: bool = true;
@@ -15,6 +14,29 @@ const INSTRUCTIONS_TEXT: &str = "To start or stop press 'ENTER'";
 const INSTRUCTIONS_TEXT_X: f32 = 200.;
 const INSTRUCTIONS_TEXT_Y: f32 = 650.;
 const INSTRUCTIONS_TEXT_SIZE: f32 = 30.;
+
+/// Abstraction of the Matrix where every cell lives.
+struct Matrix {
+    inner: Vec<Vec<bool>>
+}
+
+impl Matrix {
+    fn new(rows: usize, cols: usize) -> Self {
+        let mut inner = Vec::new();
+        for i in 0..rows {
+            let mut row = Vec::new();
+            for j in 0..cols {
+                row.push(false);
+            }
+            inner.push(row);
+        }
+        Self { inner }
+    }
+    
+    fn new_from_vector(vec_matrix: Vec<Vec<bool>>) -> Self {
+        Self { inner: vec_matrix }
+    }
+}
 
 /// Abstraction of a point in the grid.
 /// It has the form of (row, column)
@@ -32,7 +54,7 @@ impl Point {
     /// 
     /// A `bool` indicating if this is true or not.
     fn is_inside_grid(&self) -> bool {
-        self.row < ROWS && self.col < COLS
+        self.row < DIMENSION && self.col < DIMENSION
     }
 
     /// Gets all the possible 8 neighbours of the point
@@ -68,7 +90,7 @@ impl Point {
 /// - `cells`: A Vec which contains tuples that represent the cells in the amtrix to modify.
 /// - `state`: Represents wether the cell is alive or dead.
 /// - `matrix`: An array with arrays that represent the matrix which contains every cell.
-fn manage_cell_state(points: &[Point], state: bool, matrix: &mut [[bool; COLS]; ROWS]) {
+fn manage_cell_state(points: &[Point], state: bool, matrix: &mut [[bool; DIMENSION]; DIMENSION]) {
     for point in points {
         matrix[point.row][point.col] = state;
     }
@@ -85,7 +107,7 @@ fn manage_cell_state(points: &[Point], state: bool, matrix: &mut [[bool; COLS]; 
 /// # Returns
 /// 
 /// An `i32` that represents the number of alive neighbours.
-fn check_cell_alive_neighbours(point: &Point, matrix: &[[bool; COLS]; ROWS]) -> i32 {
+fn check_cell_alive_neighbours(point: &Point, matrix: &[[bool; DIMENSION]; DIMENSION]) -> i32 {
     let mut alive_neighbours = 0;
     let neighbours = point.get_neighbours();
     for p in neighbours {
@@ -103,7 +125,7 @@ fn check_cell_alive_neighbours(point: &Point, matrix: &[[bool; COLS]; ROWS]) -> 
 /// - `cell_witdh`: The width of a single cell of the matrix.
 /// - `cell_height`: The height of a single cell of the matrix.
 /// - `matrix`: An array with arrays that represent the matrix which contains every cell.
-fn draw_cells_grid(cell_witdh: f32, cell_height: f32, matrix: &[[bool; COLS]; ROWS]) {
+fn draw_cells_grid(cell_witdh: f32, cell_height: f32, matrix: &[[bool; DIMENSION]; DIMENSION]) {
     for (row_i, row) in matrix.iter().enumerate() {
         let y = cell_height * row_i as f32;
         for (col_i, cell) in row.iter().enumerate() {
@@ -139,7 +161,7 @@ fn window_conf() -> Conf {
 /// A tuple containing two `Vec<(usize, usize)>`. The first one represents all the cells
 /// that should be brought back to life, while the second vector represents all the cells
 /// that should be killed.
-fn check_cell_state(matrix: &[[bool; COLS]; ROWS]) -> (Vec<Point>, Vec<Point>) {
+fn check_cell_state(matrix: &[[bool; DIMENSION]; DIMENSION]) -> (Vec<Point>, Vec<Point>) {
     let mut cells_to_revive: Vec<Point> = Vec::new();
     let mut cells_to_kill: Vec<Point> = Vec::new();
 
@@ -189,7 +211,7 @@ fn calculate_cell_position_from_mouse(mouse_x: f32, mouse_y: f32, cell_witdh: f3
 /// - `row_i`: Represents the row in the matrix of the cell to change.
 /// - `col_i`: Represents the col in the matrix of the cell to change.
 /// - `matrix`: An array with arrays that represent the matrix which contains every cell.
-fn change_cell_state(row_i: usize, col_i: usize, matrix: &mut [[bool; COLS]; ROWS]) {
+fn change_cell_state(row_i: usize, col_i: usize, matrix: &mut [[bool; DIMENSION]; DIMENSION]) {
     let curr_state = matrix[row_i][col_i];
     let new_state = if curr_state == ALIVE { DEAD } else { ALIVE };
     matrix[row_i][col_i] = new_state
@@ -207,7 +229,7 @@ fn show_text() {
 /// - `cell_width`: Width size of a single matrix cell.
 /// - `cell_height`: Height size of a single matrix cell.
 /// - `matrix`: An array with arrays that represent the matrix which contains every cell.
-fn setup_frame(cell_width: f32, cell_height: f32, matrix: &[[bool; COLS]; ROWS]) {
+fn setup_frame(cell_width: f32, cell_height: f32, matrix: &[[bool; DIMENSION]; DIMENSION]) {
     clear_background(RED);
     draw_cells_grid(cell_width, cell_height, &matrix);
     draw_grid_lines(cell_width, cell_height);
@@ -225,7 +247,7 @@ fn draw_grid_lines(cell_width: f32, cell_height: f32) {
     let mut x2: f32;
     let mut y2: f32;
 
-    for i in 0..ROWS {
+    for i in 0..DIMENSION {
         // Vertical line. It only moves on the X axis by a step of cell_width.
         x1 = cell_width * i as f32;
         y1 = 0.;
@@ -234,7 +256,7 @@ fn draw_grid_lines(cell_width: f32, cell_height: f32) {
         draw_line(x1, y1, x2, y2, 2., LIGHTGRAY);
     }
     
-    for i in 0..COLS {
+    for i in 0..DIMENSION {
         // Horizontal line. It only moves on the Y axis by a step of cell_height.
         x1 = 0.;
         y1 = cell_height * i as f32;
@@ -246,11 +268,11 @@ fn draw_grid_lines(cell_width: f32, cell_height: f32) {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let mut matrix: [[bool; COLS]; ROWS] = [[DEAD; COLS]; ROWS];
+    let mut matrix = Matrix::new(5, 5);
     let mut begin_life = false;
     // Calculation of cell dimensions so the whole screen is used.
-    let cell_width = GRID_WIDTH / COLS as f32;
-    let cell_height = GRID_HEIGHT / ROWS as f32;
+    let cell_width = GRID_WIDTH / DIMENSION as f32;
+    let cell_height = GRID_HEIGHT / DIMENSION as f32;
     // Used for updating each frame after a desired time
     let mut last_update = get_time();
     loop {
