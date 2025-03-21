@@ -1,8 +1,7 @@
 use std::ops::{Index, IndexMut};
-
+use clap::Parser;
 use macroquad::{color::{BLACK, LIGHTGRAY, RED, WHITE}, input::{get_last_key_pressed, is_mouse_button_down, mouse_position, KeyCode}, shapes::{draw_line, draw_rectangle}, text::draw_text, time::get_time, window::{clear_background, next_frame, Conf}};
 
-const DIMENSION: usize = 3;
 const OFFSETS: [i8; 3] = [-1, 0, 1];
 const DEAD: bool = false;
 const ALIVE: bool = true;
@@ -16,6 +15,15 @@ const INSTRUCTIONS_TEXT: &str = "To start or stop press 'ENTER'";
 const INSTRUCTIONS_TEXT_X: f32 = 200.;
 const INSTRUCTIONS_TEXT_Y: f32 = 650.;
 const INSTRUCTIONS_TEXT_SIZE: f32 = 30.;
+
+/// Simple struct to receive cli params
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Dimension for the squared matrix
+    #[arg(short, long, default_value_t = 1)]
+    dimension: usize,
+}
 
 /// Abstraction of the Matrix where every cell lives.
 #[derive(PartialEq, Debug)]
@@ -40,6 +48,10 @@ impl Matrix {
         Self { inner: vec_matrix }
     }
 
+    fn dimension(&self) -> usize {
+        self.inner.len()
+    }
+
     /// Changes the cell state to the opposite of its current one
     /// 
     /// # Arguments
@@ -62,7 +74,7 @@ impl Matrix {
     /// An `i32` that represents the number of alive neighbours.
     fn check_cell_alive_neighbours(&self, point: &Point) -> i32 {
         let mut alive_neighbours = 0;
-        let neighbours = point.get_neighbours();
+        let neighbours = point.get_neighbours(self.dimension());
         for p in neighbours {
             if self[p] == ALIVE {
                 alive_neighbours += 1;
@@ -149,8 +161,8 @@ impl Point {
     /// # Returns
     /// 
     /// A `bool` indicating if this is true or not.
-    fn is_inside_grid(&self) -> bool {
-        self.row < DIMENSION && self.col < DIMENSION
+    fn is_inside_grid(&self, matrix_dimension: usize) -> bool {
+        self.row < matrix_dimension && self.col < matrix_dimension
     }
 
     /// Gets all the possible 8 neighbours of the point
@@ -158,7 +170,7 @@ impl Point {
     /// ### Returns
     /// 
     /// A vector of points that represent all the neighbours
-    fn get_neighbours(&self) -> Vec<Point> {
+    fn get_neighbours(&self, matrix_dimension: usize) -> Vec<Point> {
         let mut neighbours = Vec::new();
         for row_offset in OFFSETS {
             let row_to_check = self.row as i8 + row_offset;
@@ -167,7 +179,7 @@ impl Point {
                 // Create the point we want to use
                 let neighbour_point = Point{ row: row_to_check as usize, col: col_to_check as usize };
     
-                if !neighbour_point.is_inside_grid() 
+                if !neighbour_point.is_inside_grid(matrix_dimension) 
                 || neighbour_point == *self {
                     continue;
                 };
@@ -249,7 +261,7 @@ fn show_text() {
 fn setup_frame(cell_width: f32, cell_height: f32, matrix: &Matrix) {
     clear_background(RED);
     draw_cells_grid(cell_width, cell_height, &matrix);
-    draw_grid_lines(cell_width, cell_height);
+    draw_grid_lines(cell_width, cell_height, matrix.dimension());
 }
 
 /// Draws the lines of the grid.
@@ -258,13 +270,13 @@ fn setup_frame(cell_width: f32, cell_height: f32, matrix: &Matrix) {
 /// 
 /// - `cell_width`: Width size of a single matrix cell.
 /// - `cell_height`: Height size of a single matrix cell.
-fn draw_grid_lines(cell_width: f32, cell_height: f32) {
+fn draw_grid_lines(cell_width: f32, cell_height: f32, matrix_dimension: usize) {
     let mut x1: f32;
     let mut y1: f32;
     let mut x2: f32;
     let mut y2: f32;
 
-    for i in 0..DIMENSION {
+    for i in 0..matrix_dimension {
         // Vertical line. It only moves on the X axis by a step of cell_width.
         x1 = cell_width * i as f32;
         y1 = 0.;
@@ -273,7 +285,7 @@ fn draw_grid_lines(cell_width: f32, cell_height: f32) {
         draw_line(x1, y1, x2, y2, 2., LIGHTGRAY);
     }
     
-    for i in 0..DIMENSION {
+    for i in 0..matrix_dimension {
         // Horizontal line. It only moves on the Y axis by a step of cell_height.
         x1 = 0.;
         y1 = cell_height * i as f32;
@@ -285,11 +297,15 @@ fn draw_grid_lines(cell_width: f32, cell_height: f32) {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let mut matrix = Matrix::new(5, 5);
+    // Get the args from the cli
+    let args = Args::parse();
+    let mut matrix = Matrix::new(args.dimension, args.dimension);
+    // This will let the game now if the user wants to stop the game to do some
+    // changes or not
     let mut begin_life = false;
     // Calculation of cell dimensions so the whole screen is used.
-    let cell_width = GRID_WIDTH / DIMENSION as f32;
-    let cell_height = GRID_HEIGHT / DIMENSION as f32;
+    let cell_width = GRID_WIDTH / matrix.dimension() as f32;
+    let cell_height = GRID_HEIGHT / matrix.dimension() as f32;
     // Used for updating each frame after a desired time
     let mut last_update = get_time();
     loop {
