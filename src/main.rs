@@ -1,3 +1,5 @@
+use std::ops::{Index, IndexMut};
+
 use macroquad::{color::{BLACK, LIGHTGRAY, RED, WHITE}, input::{get_last_key_pressed, is_mouse_button_down, mouse_position, KeyCode}, shapes::{draw_line, draw_rectangle}, text::draw_text, time::get_time, window::{clear_background, next_frame, Conf}};
 
 const DIMENSION: usize = 3;
@@ -16,6 +18,7 @@ const INSTRUCTIONS_TEXT_Y: f32 = 650.;
 const INSTRUCTIONS_TEXT_SIZE: f32 = 30.;
 
 /// Abstraction of the Matrix where every cell lives.
+#[derive(PartialEq, Debug)]
 struct Matrix {
     inner: Vec<Vec<bool>>
 }
@@ -23,9 +26,9 @@ struct Matrix {
 impl Matrix {
     fn new(rows: usize, cols: usize) -> Self {
         let mut inner = Vec::new();
-        for i in 0..rows {
+        for _ in 0..rows {
             let mut row = Vec::new();
-            for j in 0..cols {
+            for _ in 0..cols {
                 row.push(false);
             }
             inner.push(row);
@@ -36,11 +39,104 @@ impl Matrix {
     fn new_from_vector(vec_matrix: Vec<Vec<bool>>) -> Self {
         Self { inner: vec_matrix }
     }
+
+    /// Changes the cell state to the opposite of its current one
+    /// 
+    /// # Arguments
+    /// 
+    /// - `point`: Represents a specific point on the grid.
+    fn change_cell_state(&mut self, point: Point) {
+        let curr_state = self[point];
+        let new_state = if curr_state == ALIVE { DEAD } else { ALIVE };
+        self[point] = new_state
+    }
+
+    /// Checks the eight neighbours of a cell and counts how many of them are alive.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `point`: A point representing a cell in the grid. 
+    /// 
+    /// # Returns
+    /// 
+    /// An `i32` that represents the number of alive neighbours.
+    fn check_cell_alive_neighbours(&self, point: &Point) -> i32 {
+        let mut alive_neighbours = 0;
+        let neighbours = point.get_neighbours();
+        for p in neighbours {
+            if self[p] == ALIVE {
+                alive_neighbours += 1;
+            }
+        }
+        alive_neighbours
+    }
+
+    /// Checks which cells should be revived and which cells should be killed.
+    /// 
+    /// # Returns
+    /// 
+    /// A tuple containing two `Vec<Point>`. The first one represents all the cells
+    /// that should be brought back to life, while the second vector represents all the cells
+    /// that should be killed.
+    fn check_cells_state(&self) -> (Vec<Point>, Vec<Point>) {
+        let mut cells_to_revive: Vec<Point> = Vec::new();
+        let mut cells_to_kill: Vec<Point> = Vec::new();
+    
+        for (row_i, row) in self.inner.iter().enumerate() {
+            for (col_i, cell) in row.iter().enumerate() {
+                let point = Point{ row: row_i, col: col_i };
+                let alive_neighbours = self.check_cell_alive_neighbours(&point);
+    
+                if *cell == DEAD && alive_neighbours == 3 {
+                    cells_to_revive.push(point);
+                } else if *cell == ALIVE && (alive_neighbours < 2 || alive_neighbours > 3) {
+                    cells_to_kill.push(point);
+                }
+            }
+        }
+    
+        (cells_to_revive, cells_to_kill)     
+    }
+
+    fn kill_cells(&mut self, cells: &Vec<Point>) {
+        self.manage_cells_state(cells, DEAD);
+    }
+
+    fn revive_cells(&mut self, cells: &Vec<Point>) {
+        self.manage_cells_state(cells, ALIVE);
+    }
+
+    /// Changes the state of specific cells in the matrix.
+    /// 
+    /// # Arguments
+    /// 
+    /// - `cells`: A Vec which contains tuples that represent the cells in the matrix to modify.
+    /// - `state`: Represents wether the cell is alive or dead.
+    fn manage_cells_state(&mut self, cells: &Vec<Point>, state: bool) {
+        for point in cells {
+            self[*point] = state;
+        }
+    }
+
+}
+
+impl Index<Point> for Matrix {
+    type Output = bool;
+
+    fn index(&self, point: Point) -> &Self::Output {
+        &self.inner[point.row][point.col]
+    }
+}
+
+impl IndexMut<Point> for Matrix {
+    fn index_mut(&mut self, point: Point) -> &mut Self::Output {
+        &mut self.inner[point.row][point.col]
+    }
 }
 
 /// Abstraction of a point in the grid.
 /// It has the form of (row, column)
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Copy, Clone)]
 struct Point {
     col: usize,
     row: usize,
@@ -83,41 +179,6 @@ impl Point {
     }
 }
 
-/// Changes the state of specific cells in the matrix.
-/// 
-/// # Arguments
-/// 
-/// - `cells`: A Vec which contains tuples that represent the cells in the amtrix to modify.
-/// - `state`: Represents wether the cell is alive or dead.
-/// - `matrix`: An array with arrays that represent the matrix which contains every cell.
-fn manage_cell_state(points: &[Point], state: bool, matrix: &mut [[bool; DIMENSION]; DIMENSION]) {
-    for point in points {
-        matrix[point.row][point.col] = state;
-    }
-}
-
-/// Checks the eight neighbours of a cell and counts how many of them are alive.
-/// 
-/// # Arguments
-/// 
-/// - `col_i_1`: Represents the column in the matrix of the cell.
-/// - `row_i_1`: Represents the row in the matrix of the cell.
-/// - `matrix`: An array with arrays that represent the matrix which contains every cell.
-/// 
-/// # Returns
-/// 
-/// An `i32` that represents the number of alive neighbours.
-fn check_cell_alive_neighbours(point: &Point, matrix: &[[bool; DIMENSION]; DIMENSION]) -> i32 {
-    let mut alive_neighbours = 0;
-    let neighbours = point.get_neighbours();
-    for p in neighbours {
-        if matrix[p.row][p.col] == ALIVE {
-            alive_neighbours += 1;
-        }
-    }
-    alive_neighbours
-}
-
 /// Draws a rectangle for each cell in the matrix, forming the necessary grid on the screen
 /// 
 /// # Arguments
@@ -125,12 +186,12 @@ fn check_cell_alive_neighbours(point: &Point, matrix: &[[bool; DIMENSION]; DIMEN
 /// - `cell_witdh`: The width of a single cell of the matrix.
 /// - `cell_height`: The height of a single cell of the matrix.
 /// - `matrix`: An array with arrays that represent the matrix which contains every cell.
-fn draw_cells_grid(cell_witdh: f32, cell_height: f32, matrix: &[[bool; DIMENSION]; DIMENSION]) {
-    for (row_i, row) in matrix.iter().enumerate() {
+fn draw_cells_grid(cell_witdh: f32, cell_height: f32, matrix: &Matrix) {
+    for (row_i, row) in matrix.inner.iter().enumerate() {
         let y = cell_height * row_i as f32;
-        for (col_i, cell) in row.iter().enumerate() {
+        for (col_i, cell_state) in row.iter().enumerate() {
             let x = cell_witdh * col_i as f32;
-            let color = if *cell == ALIVE { BLACK } else { WHITE };
+            let color = if *cell_state == ALIVE { BLACK } else { WHITE };
             draw_rectangle(x, y, cell_witdh, cell_height, color);
         }
     }
@@ -150,37 +211,6 @@ fn window_conf() -> Conf {
     }
 }
 
-/// Checks which cells should be revived and which cells should be killed.
-/// 
-/// # Arguments
-/// 
-/// - `matrix`: An array with arrays that represent the matrix which contains every cell.
-/// 
-/// # Returns
-/// 
-/// A tuple containing two `Vec<(usize, usize)>`. The first one represents all the cells
-/// that should be brought back to life, while the second vector represents all the cells
-/// that should be killed.
-fn check_cell_state(matrix: &[[bool; DIMENSION]; DIMENSION]) -> (Vec<Point>, Vec<Point>) {
-    let mut cells_to_revive: Vec<Point> = Vec::new();
-    let mut cells_to_kill: Vec<Point> = Vec::new();
-
-    for (row_i, row) in matrix.iter().enumerate() {
-        for (col_i, cell) in row.iter().enumerate() {
-            let point = Point{ row: row_i, col: col_i };
-            let alive_neighbours = check_cell_alive_neighbours(&point, matrix);
-
-            if *cell == DEAD && alive_neighbours == 3 {
-                cells_to_revive.push(point);
-            } else if *cell == ALIVE && (alive_neighbours < 2 || alive_neighbours > 3) {
-                cells_to_kill.push(point);
-            }
-        }
-    }
-
-    (cells_to_revive, cells_to_kill)
-}
-
 /// Calculates which cell is the user choosing with its mouse. 
 /// 
 /// # Arguments
@@ -193,28 +223,15 @@ fn check_cell_state(matrix: &[[bool; DIMENSION]; DIMENSION]) -> (Vec<Point>, Vec
 /// # Returns
 /// 
 /// A tuple of usize in the format of (row, column) containing the mapped matrix cell. 
-fn calculate_cell_position_from_mouse(mouse_x: f32, mouse_y: f32, cell_witdh: f32, cell_height: f32) -> Option<(usize, usize)> {
+fn calculate_cell_position_from_mouse(mouse_x: f32, mouse_y: f32, cell_witdh: f32, cell_height: f32) -> Option<Point> {
     // Since the height of the grid is not the same as the one 
     // of the screen we have to take this into account when we check the Y axis (the rows).
     if mouse_y > GRID_HEIGHT {
         return None;
     }
-    let row_i = mouse_y / cell_height;
-    let col_i = mouse_x / cell_witdh;
-    Some((row_i as usize, col_i as usize))
-}
-
-/// Changes the cell state to the opposite of its current one
-/// 
-/// # Arguments
-/// 
-/// - `row_i`: Represents the row in the matrix of the cell to change.
-/// - `col_i`: Represents the col in the matrix of the cell to change.
-/// - `matrix`: An array with arrays that represent the matrix which contains every cell.
-fn change_cell_state(row_i: usize, col_i: usize, matrix: &mut [[bool; DIMENSION]; DIMENSION]) {
-    let curr_state = matrix[row_i][col_i];
-    let new_state = if curr_state == ALIVE { DEAD } else { ALIVE };
-    matrix[row_i][col_i] = new_state
+    let row = mouse_y / cell_height;
+    let col = mouse_x / cell_witdh;
+    Some(Point { col: col as usize, row: row as usize })
 }
 
 /// Simple text drawing with the instructions for the user
@@ -229,7 +246,7 @@ fn show_text() {
 /// - `cell_width`: Width size of a single matrix cell.
 /// - `cell_height`: Height size of a single matrix cell.
 /// - `matrix`: An array with arrays that represent the matrix which contains every cell.
-fn setup_frame(cell_width: f32, cell_height: f32, matrix: &[[bool; DIMENSION]; DIMENSION]) {
+fn setup_frame(cell_width: f32, cell_height: f32, matrix: &Matrix) {
     clear_background(RED);
     draw_cells_grid(cell_width, cell_height, &matrix);
     draw_grid_lines(cell_width, cell_height);
@@ -287,15 +304,14 @@ async fn main() {
             if !begin_life {
                 if is_mouse_button_down(macroquad::input::MouseButton::Left) {
                     let (mouse_x, mouse_y) = mouse_position();
-                    match calculate_cell_position_from_mouse(mouse_x, mouse_y, cell_width, cell_height) {
-                        Some((row_i, col_i)) => change_cell_state(row_i, col_i, &mut matrix),
-                        None => {},
+                    if let Some(mouse_point) = calculate_cell_position_from_mouse(mouse_x, mouse_y, cell_width, cell_height) {
+                        matrix.change_cell_state(mouse_point);
                     }
                 }
             } else { // If the life began, cells need to start dying and reviving
-                let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-                manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
-                manage_cell_state(&cells_to_revive, ALIVE, &mut matrix);
+                let (cells_to_revive, cells_to_kill) = matrix.check_cells_state();
+                matrix.kill_cells(&cells_to_kill);
+                matrix.revive_cells(&cells_to_revive);
             }
 
         }
@@ -320,54 +336,59 @@ mod tests {
 
     #[test]
     fn alone_cell_dies() {
-        let mut matrix: [[bool; 3]; 3] = [
-            [false, false, false],
-            [false, true, false],
-            [false, false, false],
+        let matrix_vec = vec![
+            vec![false, false, false],
+            vec![false, true, false],
+            vec![false, false, false],
         ];
-        let result_matrix: [[bool; 3]; 3] = [
-            [false, false, false],
-            [false, false, false],
-            [false, false, false],
+        let result_matrix_vec = vec![
+            vec![false, false, false],
+            vec![false, false, false],
+            vec![false, false, false],
         ];
+        let mut matrix = Matrix::new_from_vector(matrix_vec);
+        let result_matrix = Matrix::new_from_vector(result_matrix_vec);
         
-        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
+        let (cells_to_revive, cells_to_kill) = matrix.check_cells_state();
 
-        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
+        matrix.kill_cells(&cells_to_kill);
+        matrix.revive_cells(&cells_to_revive);
 
         assert_eq!(matrix, result_matrix);
     }
 
     #[test]
     fn two_neighbours_survives_then_dies() {
-        let mut matrix: [[bool; 3]; 3] = [
-            [false, false, true],
-            [false, true, false],
-            [true, false, false],
+        let matrix_vec = vec![
+            vec![false, false, true],
+            vec![false, true, false],
+            vec![true, false, false],
         ];
-        let result_one_iteration_matrix: [[bool; 3]; 3] = [
-            [false, false, false],
-            [false, true, false],
-            [false, false, false],
+        let result_one_iteration_matrix_vec = vec![
+            vec![false, false, false],
+            vec![false, true, false],
+            vec![false, false, false],
         ];
-        let result_two_iterations_matrix: [[bool; 3]; 3] = [
-            [false, false, false],
-            [false, false, false],
-            [false, false, false],
+        let result_two_iterations_matrix_vec = vec![
+            vec![false, false, false],
+            vec![false, false, false],
+            vec![false, false, false],
         ];
-        
+        let mut matrix = Matrix::new_from_vector(matrix_vec);
+        let result_one_iteration_matrix = Matrix::new_from_vector(result_one_iteration_matrix_vec);
+        let result_two_iterations_matrix = Matrix::new_from_vector(result_two_iterations_matrix_vec);
+
         // Start of first iteration
-        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
+        let (cells_to_revive, cells_to_kill) = matrix.check_cells_state();
+        matrix.kill_cells(&cells_to_kill);
+        matrix.revive_cells(&cells_to_revive);
                
         assert_eq!(matrix, result_one_iteration_matrix);
 
         // Start of second iteration
-        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
+        let (cells_to_revive, cells_to_kill) = matrix.check_cells_state();
+        matrix.kill_cells(&cells_to_kill);
+        matrix.revive_cells(&cells_to_revive);
                
         assert_eq!(matrix, result_two_iterations_matrix);
 
@@ -375,82 +396,89 @@ mod tests {
 
     #[test]
     fn only_one_neighbour_both_die() {
-        let mut matrix: [[bool; 3]; 3] = [
-            [false, true, false],
-            [false, true, false],
-            [false, false, false],
+        let matrix_vec = vec![
+            vec![false, true, false],
+            vec![false, true, false],
+            vec![false, false, false],
         ];
-        let result_matrix: [[bool; 3]; 3] = [
-            [false, false, false],
-            [false, false, false],
-            [false, false, false],
+        let result_matrix_vec = vec![
+            vec![false, false, false],
+            vec![false, false, false],
+            vec![false, false, false],
         ];
+        let mut matrix = Matrix::new_from_vector(matrix_vec);
+        let result_matrix = Matrix::new_from_vector(result_matrix_vec);
         
-        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
+        let (cells_to_revive, cells_to_kill) = matrix.check_cells_state();
 
-        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
+        matrix.kill_cells(&cells_to_kill);
+        matrix.revive_cells(&cells_to_revive);
                
         assert_eq!(matrix, result_matrix);
     }
 
     #[test]
     fn four_neighbours_cell_dies() {
-        let mut matrix: [[bool; 3]; 3] = [
-            [true, false, true],
-            [false, true, false],
-            [true, false, true],
+        let matrix_vec = vec![
+            vec![true, false, true],
+            vec![false, true, false],
+            vec![true, false, true],
+        ]; 
+        let result_matrix_vec = vec![
+            vec![false, true, false],
+            vec![true, false, true],
+            vec![false, true, false],
         ];
-        let result_matrix: [[bool; 3]; 3] = [
-            [false, true, false],
-            [true, false, true],
-            [false, true, false],
-        ];
-        
-        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
+        let mut matrix = Matrix::new_from_vector(matrix_vec);
+        let result_matrix = Matrix::new_from_vector(result_matrix_vec);
 
-        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
+        let (cells_to_revive, cells_to_kill) = matrix.check_cells_state();
+
+        matrix.kill_cells(&cells_to_kill);
+        matrix.revive_cells(&cells_to_revive);
                
         assert_eq!(matrix, result_matrix);
     }
 
     #[test]
     fn simple_repetitive_pattern() {
-        let mut matrix: [[bool; 3]; 3] =[
-            [false, true, false],
-            [false, true, false],
-            [false, true, false],
+        let matrix_vec = vec![
+            vec![false, true, false],
+            vec![false, true, false],
+            vec![false, true, false],
         ];
-        let matrix_pattern_1: [[bool; 3]; 3] =[
-            [false, false, false],
-            [true, true, true],
-            [false, false, false],
+        let matrix_pattern_1_vec = vec![
+            vec![false, false, false],
+            vec![true, true, true],
+            vec![false, false, false],
         ];
-        let matrix_pattern_2: [[bool; 3]; 3] = [
-            [false, true, false],
-            [false, true, false],
-            [false, true, false],
+        let matrix_pattern_2_vec = vec![
+            vec![false, true, false],
+            vec![false, true, false],
+            vec![false, true, false],
         ];
+        let mut matrix = Matrix::new_from_vector(matrix_vec);
+        let matrix_pattern_1 = Matrix::new_from_vector(matrix_pattern_1_vec);
+        let matrix_pattern_2 = Matrix::new_from_vector(matrix_pattern_2_vec);
         
         // Start of first iteration
-        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
+        let (cells_to_revive, cells_to_kill) = matrix.check_cells_state();
+        matrix.kill_cells(&cells_to_kill);
+        matrix.revive_cells(&cells_to_revive);
                
         assert_eq!(matrix, matrix_pattern_1);
 
         // Start of second iteration
-        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
+        let (cells_to_revive, cells_to_kill) = matrix.check_cells_state();
+        matrix.kill_cells(&cells_to_kill);
+        matrix.revive_cells(&cells_to_revive);
                
         assert_eq!(matrix, matrix_pattern_2);
 
         // Start of third iteration
-        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
+        let (cells_to_revive, cells_to_kill) = matrix.check_cells_state();
+        matrix.kill_cells(&cells_to_kill);
+        matrix.revive_cells(&cells_to_revive); 
                
         assert_eq!(matrix, matrix_pattern_1);
     }
@@ -458,35 +486,37 @@ mod tests {
 
     #[test]
     fn three_neighbours_cell_survives_forever() {
-        let mut matrix: [[bool; 3]; 3] = [
-            [false, false, false],
-            [false, true, true],
-            [false, true, true],
+        let matrix_vec = vec![
+            vec![false, false, false],
+            vec![false, true, true],
+            vec![false, true, true],
         ];
-        let result_matrix: [[bool; 3]; 3] = [
-            [false, false, false],
-            [false, true, true],
-            [false, true, true],
+        let result_matrix_vec = vec![
+            vec![false, false, false],
+            vec![false, true, true],
+            vec![false, true, true],
         ];
+        let mut matrix = Matrix::new_from_vector(matrix_vec);
+        let result_matrix = Matrix::new_from_vector(result_matrix_vec);
     
         // Start of first iteration
-        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
+        let (cells_to_revive, cells_to_kill) = matrix.check_cells_state();
+        matrix.kill_cells(&cells_to_kill);
+        matrix.revive_cells(&cells_to_revive);
                
         assert_eq!(matrix, result_matrix);
 
         // Start of second iteration
-        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
+        let (cells_to_revive, cells_to_kill) = matrix.check_cells_state();
+        matrix.kill_cells(&cells_to_kill);
+        matrix.revive_cells(&cells_to_revive);
             
         assert_eq!(matrix, result_matrix);
 
         // Start of third iteration
-        let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
+        let (cells_to_revive, cells_to_kill) = matrix.check_cells_state();
+        matrix.kill_cells(&cells_to_kill);
+        matrix.revive_cells(&cells_to_revive);
             
         assert_eq!(matrix, result_matrix);
     }
