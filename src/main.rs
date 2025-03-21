@@ -16,36 +16,49 @@ const INSTRUCTIONS_TEXT_X: f32 = 200.;
 const INSTRUCTIONS_TEXT_Y: f32 = 650.;
 const INSTRUCTIONS_TEXT_SIZE: f32 = 30.;
 
-
-/// Verifies if the position represented by the point ('row_i', 'col_i') is inside
-/// the matrix. 
-/// 
-/// # Arguments
-/// 
-/// - `row_i`: Represents the row in the matrix of the point.
-/// - `col_i`: Represents the column in the matrix of the point.
-/// 
-/// # Returns
-/// 
-/// A `bool` indicating if this is true or not.
-fn is_position_valid(row_i: i8, col_i: i8) -> bool {
-    (row_i >= 0 && row_i < ROWS as i8) && (col_i >= 0 && col_i < COLS as i8)
+/// Abstraction of a point in the grid.
+/// It has the form of (row, column)
+#[derive(PartialEq, Eq)]
+struct Point {
+    col: usize,
+    row: usize,
 }
 
-/// Verifies if 2 points on the matrix are the same point. 
-/// 
-/// # Arguments
-/// 
-/// - `row_i_1`: Represents the row in the matrix of point 1.
-/// - `col_i_1`: Represents the column in the matrix of point 1.
-/// - `row_i_2`: Represents the row in the matrix of point 2.
-/// - `col_i_2`: Represents the column in the matrix of point 2.
-/// 
-/// # Returns
-/// 
-/// A `bool` indicating if this is true or not.
-fn is_different_cell(row_i_1: i8, col_i_1: i8, row_i_2: i8, col_i_2: i8) -> bool {
-    row_i_1 != row_i_2 || col_i_1 != col_i_2
+impl Point {
+    /// Verifies if the position represented by the point is inside
+    /// the matrix. 
+    /// 
+    /// # Returns
+    /// 
+    /// A `bool` indicating if this is true or not.
+    fn is_inside_grid(&self) -> bool {
+        self.row < ROWS && self.col < COLS
+    }
+
+    /// Gets all the possible 8 neighbours of the point
+    /// 
+    /// ### Returns
+    /// 
+    /// A vector of points that represent all the neighbours
+    fn get_neighbours(&self) -> Vec<Point> {
+        let mut neighbours = Vec::new();
+        for row_offset in OFFSETS {
+            let row_to_check = self.row as i8 + row_offset;
+            for col_offset in OFFSETS {
+                let col_to_check = self.col as i8 + col_offset;
+                // Create the point we want to use
+                let neighbour_point = Point{ row: row_to_check as usize, col: col_to_check as usize };
+    
+                if !neighbour_point.is_inside_grid() 
+                || neighbour_point == *self {
+                    continue;
+                };
+                
+                neighbours.push(neighbour_point);
+            }
+        }
+        neighbours
+    }
 }
 
 /// Changes the state of specific cells in the matrix.
@@ -55,9 +68,9 @@ fn is_different_cell(row_i_1: i8, col_i_1: i8, row_i_2: i8, col_i_2: i8) -> bool
 /// - `cells`: A Vec which contains tuples that represent the cells in the amtrix to modify.
 /// - `state`: Represents wether the cell is alive or dead.
 /// - `matrix`: An array with arrays that represent the matrix which contains every cell.
-fn manage_cell_state(cells: Vec<(usize, usize)>, state: bool, matrix: &mut [[bool; COLS]; ROWS]) {
+fn manage_cell_state(cells: &[(usize, usize)], state: bool, matrix: &mut [[bool; COLS]; ROWS]) {
     for (row_i, col_i) in cells {
-        matrix[row_i][col_i] = state;
+        matrix[*row_i][*col_i] = state;
     }
 }
 
@@ -72,31 +85,14 @@ fn manage_cell_state(cells: Vec<(usize, usize)>, state: bool, matrix: &mut [[boo
 /// # Returns
 /// 
 /// An `i32` that represents the number of alive neighbours.
-fn check_cell_alive_neighbours(col_i: usize, row_i: usize, matrix: &[[bool; COLS]; ROWS]) -> i32 {
+fn check_cell_alive_neighbours(point: Point, matrix: &[[bool; COLS]; ROWS]) -> i32 {
     let mut alive_neighbours = 0;
-    // This parsing is done here so we don't do it in every loop 
-    let parsed_row_i = row_i as i8;
-    let parsed_col_i = col_i as i8;
-
-    // Check all neighbours. This means we have to check on 3 rows and 3 columns.
-    for row_offset in OFFSETS {
-        let row_to_check = parsed_row_i + row_offset;
-        for col_offset in OFFSETS {
-            let col_to_check = parsed_col_i + col_offset;
-            
-            if !is_position_valid(row_to_check, col_to_check) 
-            || !is_different_cell(parsed_row_i, parsed_col_i, row_to_check, col_to_check) {
-                continue;
-            };
-
-            let cell_to_check = matrix[row_to_check as usize][col_to_check as usize];
-
-            if cell_to_check == ALIVE {
-                alive_neighbours += 1;
-            }
+    let neighbours = point.get_neighbours();
+    for p in neighbours {
+        if matrix[p.row][p.col] == ALIVE {
+            alive_neighbours += 1;
         }
     }
-
     alive_neighbours
 }
 
@@ -149,7 +145,8 @@ fn check_cell_state(matrix: &[[bool; COLS]; ROWS]) -> (Vec<(usize, usize)>, Vec<
 
     for (row_i, row) in matrix.iter().enumerate() {
         for (col_i, cell) in row.iter().enumerate() {
-            let alive_neighbours = check_cell_alive_neighbours(col_i, row_i, matrix);
+            let point = Point{ row: row_i, col: col_i };
+            let alive_neighbours = check_cell_alive_neighbours(point, matrix);
 
             if *cell == DEAD && alive_neighbours == 3 {
                 cells_to_revive.push((row_i, col_i));
@@ -275,8 +272,8 @@ async fn main() {
                 }
             } else { // If the life began, cells need to start dying and reviving
                 let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-                manage_cell_state(cells_to_kill, DEAD, &mut matrix);
-                manage_cell_state(cells_to_revive, ALIVE, &mut matrix);
+                manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
+                manage_cell_state(&cells_to_revive, ALIVE, &mut matrix);
             }
 
         }
@@ -314,8 +311,8 @@ mod tests {
         
         let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
 
-        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
 
         assert_eq!(matrix, result_matrix);
     }
@@ -340,15 +337,15 @@ mod tests {
         
         // Start of first iteration
         let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
                
         assert_eq!(matrix, result_one_iteration_matrix);
 
         // Start of second iteration
         let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
                
         assert_eq!(matrix, result_two_iterations_matrix);
 
@@ -369,8 +366,8 @@ mod tests {
         
         let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
 
-        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
                
         assert_eq!(matrix, result_matrix);
     }
@@ -390,8 +387,8 @@ mod tests {
         
         let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
 
-        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
                
         assert_eq!(matrix, result_matrix);
     }
@@ -416,22 +413,22 @@ mod tests {
         
         // Start of first iteration
         let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
                
         assert_eq!(matrix, matrix_pattern_1);
 
         // Start of second iteration
         let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
                
         assert_eq!(matrix, matrix_pattern_2);
 
         // Start of third iteration
         let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
                
         assert_eq!(matrix, matrix_pattern_1);
     }
@@ -452,22 +449,22 @@ mod tests {
     
         // Start of first iteration
         let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
                
         assert_eq!(matrix, result_matrix);
 
         // Start of second iteration
         let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
             
         assert_eq!(matrix, result_matrix);
 
         // Start of third iteration
         let (cells_to_revive, cells_to_kill) = check_cell_state(&matrix);
-        manage_cell_state(cells_to_kill, DEAD, &mut matrix);
-        manage_cell_state(cells_to_revive, ALIVE, &mut matrix); 
+        manage_cell_state(&cells_to_kill, DEAD, &mut matrix);
+        manage_cell_state(&cells_to_revive, ALIVE, &mut matrix); 
             
         assert_eq!(matrix, result_matrix);
     }
