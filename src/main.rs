@@ -68,9 +68,9 @@ impl Point {
 /// - `cells`: A Vec which contains tuples that represent the cells in the amtrix to modify.
 /// - `state`: Represents wether the cell is alive or dead.
 /// - `matrix`: An array with arrays that represent the matrix which contains every cell.
-fn manage_cell_state(cells: &[(usize, usize)], state: bool, matrix: &mut [[bool; COLS]; ROWS]) {
-    for (row_i, col_i) in cells {
-        matrix[*row_i][*col_i] = state;
+fn manage_cell_state(points: &[Point], state: bool, matrix: &mut [[bool; COLS]; ROWS]) {
+    for point in points {
+        matrix[point.row][point.col] = state;
     }
 }
 
@@ -85,7 +85,7 @@ fn manage_cell_state(cells: &[(usize, usize)], state: bool, matrix: &mut [[bool;
 /// # Returns
 /// 
 /// An `i32` that represents the number of alive neighbours.
-fn check_cell_alive_neighbours(point: Point, matrix: &[[bool; COLS]; ROWS]) -> i32 {
+fn check_cell_alive_neighbours(point: &Point, matrix: &[[bool; COLS]; ROWS]) -> i32 {
     let mut alive_neighbours = 0;
     let neighbours = point.get_neighbours();
     for p in neighbours {
@@ -139,19 +139,19 @@ fn window_conf() -> Conf {
 /// A tuple containing two `Vec<(usize, usize)>`. The first one represents all the cells
 /// that should be brought back to life, while the second vector represents all the cells
 /// that should be killed.
-fn check_cell_state(matrix: &[[bool; COLS]; ROWS]) -> (Vec<(usize, usize)>, Vec<(usize, usize)>) {
-    let mut cells_to_revive: Vec<(usize, usize)> = Vec::new();
-    let mut cells_to_kill: Vec<(usize, usize)> = Vec::new();
+fn check_cell_state(matrix: &[[bool; COLS]; ROWS]) -> (Vec<Point>, Vec<Point>) {
+    let mut cells_to_revive: Vec<Point> = Vec::new();
+    let mut cells_to_kill: Vec<Point> = Vec::new();
 
     for (row_i, row) in matrix.iter().enumerate() {
         for (col_i, cell) in row.iter().enumerate() {
             let point = Point{ row: row_i, col: col_i };
-            let alive_neighbours = check_cell_alive_neighbours(point, matrix);
+            let alive_neighbours = check_cell_alive_neighbours(&point, matrix);
 
             if *cell == DEAD && alive_neighbours == 3 {
-                cells_to_revive.push((row_i, col_i));
+                cells_to_revive.push(point);
             } else if *cell == ALIVE && (alive_neighbours < 2 || alive_neighbours > 3) {
-                cells_to_kill.push((row_i, col_i));
+                cells_to_kill.push(point);
             }
         }
     }
