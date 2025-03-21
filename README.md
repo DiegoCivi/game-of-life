@@ -7,6 +7,6 @@ This project uses:
  -  Macroquad 0.4
 
 ### How to
-To execute the project you should run `make play`.
+To execute the project you should run `make dim=[desired grid dimension]`.
 
 To execute tests you should run `make test`.

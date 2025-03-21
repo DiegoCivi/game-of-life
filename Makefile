@@ -1,8 +1,11 @@
+play: 
+	cargo run -- --dimension $(dim)
+
+run: 
+	cargo run -- --dimension $(dim)
+
 test:
 	cargo test
-
-play: 
-	cargo run
 
 clean:
 	cargo clean
@@ -10,5 +13,3 @@ clean:
 build:
 	cargo build
 
-run: 
-	cargo run
